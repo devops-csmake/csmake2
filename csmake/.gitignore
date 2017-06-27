@@ -1,8 +1,0 @@
-*.pyc
-target
-test-results
-.*.swo
-.*.swp
-.coverage
-.project
-.pydevproject
