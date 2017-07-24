@@ -649,7 +649,9 @@ class CliDriver(object):
         execinstance.log.devdebug("Completed %s on aspects", joinpoint)
         return joinpointsImplemented
 
-    def launchStep(self, step, phase):
+    #extraOptions are overridden by buildspec
+    #overrideOptions override the buildspec
+    def launchStep(self, step, phase, extraOptions={}, overrideOptions={}):
         section = "<Unspecified>"
         resultObject = None
         execinstance = None
@@ -657,6 +659,7 @@ class CliDriver(object):
         launchPassed = False
         pushedModule = False
         stepdict = {}
+        stepdict.update(extraOptions)
         flowcontrol = AspectFlowControl(self.log)
         try:
             self.log.devdebug("Looking up section for: %s", step)
@@ -684,10 +687,13 @@ class CliDriver(object):
                 stanzas = self.buildspec.options(section)
                 for stanza in stanzas:
                     stepdict[stanza] = self.buildspec.get(section, stanza)
+                stepdict.update(overrideOptions)
             finally:
                 self.buildspecLock.release()
 
             self.log.devdebug("stepdict: %s", str(stepdict))
+            self.log.devdebug("extraOptions: %s", str(extraOptions))
+            self.log.devdebug("overrideOptions: %s", str(overrideOptions))
             self.log.devdebug("Looking up module: %s", sectionType)
 
             execinstance = self.getSectionTypeInstance(sectionType, resultObject)
@@ -924,6 +930,7 @@ class CliDriver(object):
                 self.log.error("XXX Execution of csmake failed")
                 returncode = 1
             signal.signal(signal.SIGTTOU, self.ttou_handler)
+            os.system('stty sane')
         sys.exit(returncode)
 
     def realmain(self):

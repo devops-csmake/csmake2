@@ -29,6 +29,7 @@ class DebianPackage(Packager):
     """Purpose: To create a .deb package that can be consumed by dpkg.
        Implements: Packager
        Type: Module   Library: csmake (core)
+       Package Name Format: debian
        Phases:
            package - Will build a debian package
            clean, package_clean - will delete the package
@@ -60,20 +61,21 @@ class DebianPackage(Packager):
     """
 
     REQUIRED_OPTIONS = ['package-version', 'maps', 'result', 'debian-directory-copyright']
+    PACKAGER_NAME_FORMAT = "debian"
 
     METAMAP_METHODS = {
-        'Package' : Packager.MetadataMapper,
+        'Package' : Packager.PackageNameMapper,
         'Maintainer' : Packager.MetadataMapper,
         'Description' : Packager.MetadataMapper,
-        'Depends' : Packager.MetadataMapper,
-        'Recommends' : Packager.MetadataMapper,
-        'Suggests' : Packager.MetadataMapper,
-        'Enhances' : Packager.MetadataMapper,
-        'Pre-depends' : Packager.MetadataMapper,
-        'Breaks' : Packager.MetadataMapper,
-        'Conflicts' : Packager.MetadataMapper,
-        'Provides' : Packager.MetadataMapper,
-        'Replaces' : Packager.MetadataMapper,
+        'Depends' : Packager.PackageNameMapper,
+        'Recommends' : Packager.PackageNameMapper,
+        'Suggests' : Packager.PackageNameMapper,
+        'Enhances' : Packager.PackageNameMapper,
+        'Pre-depends' : Packager.PackageNameMapper,
+        'Breaks' : Packager.PackageNameMapper,
+        'Conflicts' : Packager.PackageNameMapper,
+        'Provides' : Packager.PackageNameMapper,
+        'Replaces' : Packager.PackageNameMapper,
         'Section' : Packager.ClassifierMapper,
         '**python-lib' : Packager.AppendingClassifierMapper
     }
