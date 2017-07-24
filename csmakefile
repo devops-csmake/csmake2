@@ -25,7 +25,7 @@ test=Run testing for csmake
 
 [metadata@csmake]
 name=csmake
-version=1.5.21
+version=1.5.22
 description=build scripting tool allowing a completely specified build process
 about=Most build tools are centered around the idea of delivering one or a
  handful of results based around a single tool or development path.
@@ -56,7 +56,7 @@ about=Most build tools are centered around the idea of delivering one or a
  make (csmake).
  .
  Python coverage is needed if you want to use the python testing
-packager=HP CloudSystem RIDE Team  <hpcloud-cs-ride@hpe.com>
+packager=Jeremiah Patterson <jerpat@hpe.com>
 manufacturer=Hewlett Packard Enterprise
 depends=python (>= 2.6)
 recommends=python-coverage, chrpath
@@ -71,7 +71,7 @@ classifiers=
     Programming Language :: Python :: 2
     Programming Language :: Python :: 2.6
     Programming Language :: Python :: 2.7
-    License :: Other/Proprietary License
+    License :: OSI Approved :: GNU General Public License v3 (GPLv3)
 **files=
     <bin (python:script)> csmake,
     <Csmake (python:package)>  Csmake/*.py,
@@ -79,13 +79,24 @@ classifiers=
     <man (groff:man-source)> docs/*.*.roff
 
 [copyright@csmake-copyright]
-disclaimer=This software was produced for and by Hewlett Packard Enterprise
-   All rights are reserved.
-license=non-free
+disclaimer=
+ This program is free software: you can redistribute it and/or modify it
+ under the terms of the GNU General Public License as published by the
+ Free Software Foundation, either version 3 of the License, or (at your
+ option) any later version.
+ .
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
+ Public License for more details.
+ .
+ You should have received a copy of the GNU General Public License
+ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ .
+ On Debian based systems see: /usr/share/common-licenses
+license=GPLv3
 holder=Hewlett Packard Enterprise
 years=2014-2017
-comment=If csmake is made public, this copyright would need to change to
-   reflect that
 
 [AsciiGPGSignature@default-ascii-signer]
 [DebianPackage@debian-csmake-signed]

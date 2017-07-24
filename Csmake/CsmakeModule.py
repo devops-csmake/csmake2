@@ -120,6 +120,9 @@ class CsmakeModule:
     def _initCallInfo(self, outOptions, calledId):
         self.outOptions = outOptions
         self.calledId = calledId
+        self.actualId = calledId
+        if '@' in calledId:
+            self.actualId = calledId.split('@')[1]
 
     def _doOptionSubstitutions(self, options):
         self.originalOptions = list(options)

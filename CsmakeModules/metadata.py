@@ -155,7 +155,7 @@ class metadata(CsmakeModuleAllPhase):
     """
 
     RESERVED_FLAGS = ['description']
-    REUQIRED_OPTIONS = ['name', 'version']
+    REQUIRED_OPTIONS = ['name', 'version']
 
     def __init__(self, env, log):
         CsmakeModuleAllPhase.__init__(self, env, log)

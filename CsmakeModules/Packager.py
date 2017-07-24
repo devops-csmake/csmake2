@@ -29,6 +29,7 @@ class Packager(CsmakeModule):
                 Other kinds of packagers should subclass this
                 implementation.
        Type: Module   Library: csmake (core)
+       Package Name Format: tarball
        Phases:
            package - Will build the package
            clean, package_clean - will delete the package
@@ -146,13 +147,30 @@ class Packager(CsmakeModule):
     """
 
     REQUIRED_OPTIONS = ['maps', 'result', 'package-version']
+    PACKAGER_NAME_FORMAT = "tarball"
 
-
-    #Define custome mapper classes to handle more esoteric
-    # mappings between available metadata and specific package needs
-    # mapdict should return a structure usable to the method
-    # returned by mapmethod
+    #These mapper classes are here to allow individual metadata attributes
+    #   to be mapped declaratively using these class names.
+    #
+    # The way this works is the mapper calls mapdict passing itself in
+    # Then mapmethod is called - and returns a method that will perform
+    # the mapping
+    #   The contract is that what is passed to the mapper class method
+    #   will have the standard components referenced - for example
+    #   everything referenced as packager.* below is guaranteed to be defined
+    #   in Packager (but may be overridden by a subclass of Packager)
+    #
+    # Below you can see the METAMAP_METHODS (which use these classes)
+    # these are the mappings to the required or desired names the packager cares
+    # about and how the values should be constructed via the given Mapper class.
+    #
+    # The idea generally is that there are a handful of generic ways to map
+    # most metadata from a generic declaration to a specific instance that
+    # a specific package format requires - and that package formats generally
+    # require the same kinds of information - just with differing keys.
+    #
     class MetadataMapper:
+        """Basic mapper: Translates a metadata key to a packager specific key"""
         @staticmethod
         def mapdict(packager):
             return packager.productMetadata
@@ -161,7 +179,23 @@ class Packager(CsmakeModule):
         def mapmethod(packager):
             return packager._mapMetadata
 
+    class PackageNameMapper:
+        """Package name mapper: Attempts to translate given package names
+               to the names of the format desired by the Packager.
+            NOTE: Override PACKAGER_NAME_FORMAT to dictate the naming scheme"""
+        @staticmethod
+        def mapdict(packager):
+            return packager.productMetadata
+
+        @staticmethod
+        def mapmethod(packager):
+            return packager._mapPackageNameMetadata
+
     class ClassifierMapper:
+        """Classifier interpreter: Translates trove declarations to
+                                   packager specific information.
+              This picks the *best* information to deliver based on
+              prioritization of the matches"""
         @staticmethod
         def mapdict(packager):
             return packager._parseClassifiers()
@@ -171,6 +205,9 @@ class Packager(CsmakeModule):
             return packager._mapClassifiers
 
     class AppendingClassifierMapper:
+        """Classifier interpreter: Translates trove declarations to
+                                   packager specific information.
+              This picks all the matching information to deliver"""
         @staticmethod
         def mapdict(packager):
             return packager._parseClassifiers()
@@ -182,7 +219,7 @@ class Packager(CsmakeModule):
     #Structure is:
     # <Metadata tag for format> : <mapped value class> (above)
     METAMAP_METHODS = {
-        'Package' : MetadataMapper,
+        'Package' : PackageNameMapper,
         '**python-lib' : AppendingClassifierMapper,
         'License' : ClassifierMapper
     }
@@ -321,6 +358,44 @@ class Packager(CsmakeModule):
         metamap = self.__class__.METAMAP
         if key in metamap and metamap[key] in dictionary:
             return dictionary[metamap[key]]
+        else:
+            return None
+
+    def _translatePackageNames(self, packagesOption):
+        fullList = []
+        packages = self._parseCommaAndNewlineList(packagesOption)
+        phase = self.engine.getPhase()
+        for package in packages:
+            nameParts = package.split('(')
+            self.log.devdebug("nameParts: %s", str(nameParts))
+            packageName = nameParts[0].strip()
+            transName = packageName
+            qual = ""
+            if len(nameParts) > 1:
+                qual = '(' + nameParts[1]
+            sectionLookup = "translatePackageName@~~%s~~" % packageName
+            if self.engine.lookupSection(sectionLookup) is not None:
+                step = self.engine.launchStep(
+                    sectionLookup,
+                    phase,
+                    extraOptions={'~~format~~' : self.__class__.PACKAGER_NAME_FORMAT})
+                if step is not None:
+                    result = step._getResult()
+                    if result is not None:
+                        transName = result.getReturnValue(
+                            phase )
+                        if transName is None:
+                            transName = packageName
+            if len(transName) != 0:
+                fullList.append(transName + qual)
+        return ','.join(fullList)
+
+    def _mapPackageNameMetadata(self, key, dictionary):
+        """This method handles the translation of the package names given
+           to the packager's format, defined in PACKAGER_NAME_FORMAT"""
+        metamap = self.__class__.METAMAP
+        if key in metamap and metamap[key] in dictionary:
+            return self._translatePackageNames(dictionary[metamap[key]])
         else:
             return None
 
