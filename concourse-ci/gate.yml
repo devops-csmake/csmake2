@@ -9,5 +9,12 @@ inputs:
   - name: csmake-pull-requests
 
 run:
-  path: csmake-pull-requests/RUNTESTS.sh
+  path: /bin/bash
+  args:
+  - -exc
+  - |
+    sudo pip install coverage
+    pushd csmake-pull-requests
+    ./RUNTESTS.sh
+    popd
 
