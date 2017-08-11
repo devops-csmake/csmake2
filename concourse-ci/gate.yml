@@ -18,7 +18,14 @@ run:
   - |
     pip install coverage
     pushd csmake-pull-requests
-    ./RUNTESTS.sh
-    popd
-    mv csmake-pull-requests/test-results/* test-results
+    if ./RUNTESTS.sh
+    then
+        echo "Gate Passed"
+    else
+        popd
+        mv csmake-pull-requests/test-results/* test-results
+        echo "Gate Failed"
+        cat `ls -t test-results | head -n 1`
+        exit 1
+    fi
 
