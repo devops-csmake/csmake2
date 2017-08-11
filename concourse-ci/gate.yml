@@ -9,7 +9,7 @@ inputs:
   - name: csmake-pull-requests
 
 outputs:
-  - name: csmake-pull-requests/test-results
+  - name: test-results
 
 run:
   path: /bin/bash
@@ -20,4 +20,5 @@ run:
     pushd csmake-pull-requests
     ./RUNTESTS.sh
     popd
+    mv csmake-pull-requests/test-results/* test-results
 
