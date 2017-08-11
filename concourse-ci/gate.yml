@@ -3,7 +3,7 @@ platform: linux
 
 image_resource:
   type: docker-image
-  source: {repository: python, tag: jessie}
+  source: {repository: python, tag: 2-jessie}
 
 inputs:
   - name: csmake-pull-requests
