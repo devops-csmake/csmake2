@@ -13,7 +13,7 @@ run:
   args:
   - -exc
   - |
-    sudo pip install coverage
+    pip install coverage
     pushd csmake-pull-requests
     ./RUNTESTS.sh
     popd
