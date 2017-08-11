@@ -8,6 +8,9 @@ image_resource:
 inputs:
   - name: csmake-pull-requests
 
+outputs:
+  - name: csmake-pull-requests/test-results
+
 run:
   path: /bin/bash
   args:
