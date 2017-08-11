@@ -25,7 +25,7 @@ run:
         popd
         mv csmake-pull-requests/test-results/* test-results
         echo "Gate Failed"
-        cat `ls -t test-results | head -n 1`
+        cat test-results/`ls -t test-results | head -n 1`
         exit 1
     fi
 
