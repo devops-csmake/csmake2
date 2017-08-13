@@ -18,7 +18,7 @@ run:
   - |
     virtualenv testrun
     . testrun/bin/activate
-    pip install coverage
+    pip install --system coverage
     pushd csmake-pull-requests
     if ./RUNTESTS.sh
     then
@@ -26,7 +26,7 @@ run:
     else
         popd
         echo "Gate Failed"
-        cat csmake-pull-requests/test-results/`ls -t test-results | head -n 1`
+        cat csmake-pull-requests/test-results/`ls -t csmake-pull-requests/test-results | head -n 1`
         exit 1
     fi
     mv csmake-pull-requests/test-results/* test-results
