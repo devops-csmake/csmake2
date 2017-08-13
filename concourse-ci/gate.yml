@@ -16,6 +16,8 @@ run:
   args:
   - -exc
   - |
+    virtualenv testrun
+    . testrun/bin/activate
     pip install coverage
     pushd csmake-pull-requests
     if ./RUNTESTS.sh
