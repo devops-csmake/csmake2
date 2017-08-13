@@ -18,7 +18,8 @@ run:
   - |
     virtualenv testrun
     . testrun/bin/activate
-    pip install --system coverage
+    pip install coverage
+    pip freeze
     pushd csmake-pull-requests
     if ./RUNTESTS.sh
     then
