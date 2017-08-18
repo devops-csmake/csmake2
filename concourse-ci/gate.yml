@@ -1,0 +1,34 @@
+---
+platform: linux
+
+image_resource:
+  type: docker-image
+  source:
+    repository: office-ubuntu.jerpat.inside:5000/csmake/csmake-dockertest
+    tag: "latest"
+    insecure_registries: ["office-ubuntu.jerpat.inside:5000"]
+
+inputs:
+  - name: csmake-pull-requests
+
+outputs:
+  - name: test-results
+
+run:
+  path: /bin/bash
+  args:
+  - -exc
+  - |
+    pushd csmake-pull-requests
+    if ./RUNTESTS.sh
+    then
+        echo "Gate Passed"
+    else
+        popd
+        echo "Gate Failed"
+        cat csmake-pull-requests/test-results/`ls -t csmake-pull-requests/test-results | head -n 1`
+        exit 1
+    fi
+    popd
+    mv csmake-pull-requests/test-results/* test-results
+
