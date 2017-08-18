@@ -3,7 +3,10 @@ platform: linux
 
 image_resource:
   type: docker-image
-  source: {repository: python, tag: 2-jessie}
+  source:
+    repository: office-ubuntu.jerpat.inside:5000/csmake/csmake-dockertest
+    tag: "latest"
+    insecure_registries: ["office-ubuntu.jerpat.inside:5000"]
 
 inputs:
   - name: csmake-pull-requests
