@@ -29,5 +29,6 @@ run:
         cat csmake-pull-requests/test-results/`ls -t csmake-pull-requests/test-results | head -n 1`
         exit 1
     fi
+    popd
     mv csmake-pull-requests/test-results/* test-results
 
