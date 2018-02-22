@@ -1,4 +1,5 @@
 # <copyright>
+# (c) Copyright 2018 Cardinal Peak Technologies, LLC
 # (c) Copyright 2017 Hewlett Packard Enterprise Development LP
 #
 # This program is free software: you can redistribute it and/or modify it
@@ -361,41 +362,160 @@ class Packager(CsmakeModule):
         else:
             return None
 
-    def _translatePackageNames(self, packagesOption):
-        fullList = []
-        packages = self._parseCommaAndNewlineList(packagesOption)
-        phase = self.engine.getPhase()
+    #Creates an ast of boolean expressions where
+    # '' is translated to None
+    # 'a' is translated to ('id', 'a', '')
+    # 'a (> 2.0), b' is translated to ['and' ('id', 'a'`, "> 2.0"), ('id', 'b', "")]
+    # 'a | b | c, d' is translated to:
+    #    ['and' ['or' ('id', "a", ""), ('id', "b", ""), ('id', "c", "")], ('id', "d", "")]
+    def _parsePackageDependencyEntry(self, entries):
+        packages = self._parseCommaAndNewlineList(entries)
+        packageList = []
         for package in packages:
-            nameParts = package.split('(')
-            self.log.devdebug("nameParts: %s", str(nameParts))
-            packageName = nameParts[0].strip()
-            transName = packageName
-            qual = ""
-            if len(nameParts) > 1:
-                qual = '(' + nameParts[1]
+            packageParts = package.split('|')
+            partList = []
+            for part in packageParts:
+                part = part.strip()
+                nameParts = part.split('(')
+                packageName = []
+                versionQual = ""
+                current = 0
+                for namePart in nameParts:
+                    namePart = namePart.strip()
+                    if namePart[0] in '<=>~' or namePart == '{version})':
+                        versionQual = namePart.strip().strip(')')
+                        current += 1
+                        break
+                    packageName.append(namePart)
+                    current += 1
+                if current != len(nameParts):
+                    self.log.warning("Invalid dependency specification found: %s", part)
+                    self.log.warning("   Parts ignored: %s", str(nameParts[current:]))
+                packageName = '('.join(packageName)
+                partList.append(('id', packageName, versionQual))
+            if len(partList) > 1:
+                packageList.append(['or'] + partList)
+            else:
+                packageList.append(partList[0])
+        if len(packageList) > 1:
+            return ['and'] + packageList
+        elif len(packageList) == 0:
+            return None
+        else:
+            return packageList[0]
+
+    def _translatedPackageVersionHelper(self, item, version):
+        if item is None:
+            return None
+        if item[0] == 'id':
+            if item[2] == '{version}':
+                return ('id', item[1], version)
+            else:
+                return item
+        result = [item[0]]
+        for current in item[1:]:
+            currentResult = self._translatedPackageVersionHelper(current, version)
+            if currentResult is None:
+                continue
+            result.append(currentResult)
+        if len(result) == 1:
+            return None
+        else:
+            return result
+
+    def _translatePackageNameHelper(self, current):
+        if current is None:
+            return None
+        if current[0] == 'id':
+            resultAst = current
+            packageName = current[1]
+            #See if there's a translation....
             sectionLookup = "translatePackageName@~~%s~~" % packageName
             if self.engine.lookupSection(sectionLookup) is not None:
+                phase = self.engine.getPhase()
                 step = self.engine.launchStep(
                     sectionLookup,
                     phase,
                     extraOptions={'~~format~~' : self.__class__.PACKAGER_NAME_FORMAT})
                 if step is not None:
+                    #There is a translation defined...
                     result = step._getResult()
                     if result is not None:
-                        transName = result.getReturnValue(
+                        #There is a result
+                        transItems = result.getReturnValue(
                             phase )
-                        if transName is None:
-                            transName = packageName
-            if len(transName) != 0:
-                fullList.append(transName + qual)
-        return ','.join(fullList)
+                        if transItems is None:
+                            return None
+                        #The result isn't "None" it could be empty....
+                        transAst = self._parsePackageDependencyEntry(transItems)
+                        if transAst is None:
+                            return None
+                        if transAst[0] == 'id':
+                            if len(transAst[2]) == 0 \
+                               or transAst[2] == '{version}':
+                                return ('id', transAst[1], current[2])
+                            else:
+                                return transAst
+                        self.log.debug("Sending to version helper: %s", transAst)
+                        resultAst = self._translatedPackageVersionHelper(transAst, current[2])
+            return resultAst
+        result = [current[0]]
+        for part in current[1:]:
+            partResult = self._translatePackageNameHelper(part)
+            if partResult is None:
+                continue
+            result.append(partResult)
+        if len(result) == 1:
+            return None
+        if len(result) == 2:
+            return result[1]
+        else:
+            return result
+
+    def _translatePackageNames(self, packagesOption):
+        fullList = []
+        self.log.debug("Input: %s", str(packagesOption))
+        phase = self.engine.getPhase()
+        ast = self._parsePackageDependencyEntry(packagesOption)
+        self.log.debug("Dep AST: %s", str(ast))
+        result = self._translatePackageNameHelper(ast)
+        self.log.debug("Post trans: %s", str(result))
+        return result
+
+    def _unrollAstToDebianStyleDependency(self, ast):
+        #Debian doesn't support nested booleans
+        #   so the semantics of the AST won't be fully preserved
+        #   when it's a complex nested structure.
+        #   - there is a way to preserve the meaning by generating
+        #     every combination of each term between the ors and ands
+        #     ....just don't do that, it's confusing and probably wrong
+        if ast is None:
+            return ''
+        if ast[0] == 'id':
+            if len(ast[2]) > 0:
+                return "%s (%s)" % (ast[1], ast[2])
+            else:
+                return ast[1]
+        else:
+            result = []
+            for item in ast[1:]:
+                result.append(self._unrollAstToDebianStyleDependency(item))
+            if ast[0] == 'and':
+                return ', '.join(result)
+            elif ast[0] == 'or':
+                return ' | '.join(result)
+            else:
+                self.log.warning("Invalid parse of package occurred: %s", str(ast))
 
     def _mapPackageNameMetadata(self, key, dictionary):
         """This method handles the translation of the package names given
            to the packager's format, defined in PACKAGER_NAME_FORMAT"""
         metamap = self.__class__.METAMAP
         if key in metamap and metamap[key] in dictionary:
-            return self._translatePackageNames(dictionary[metamap[key]])
+            result = self._unrollAstToDebianStyleDependency(
+                self._translatePackageNames(dictionary[metamap[key]]) )
+            self.log.debug("Unrolled AST: %s", result)
+            return result
         else:
             return None
 
@@ -799,16 +919,20 @@ class Packager(CsmakeModule):
                         permissions = target
                         installmap['permissions'] = permissions
                     elif mappart == 'copyright':
-                        if target not in copymaps:
-                            result = self.engine.launchStep(
-                                target,
-                                'package' )
-                            if result is None or not result._didPass():
-                                self.log.error("%s step failed", target)
-                                self.log.failed()
-                                raise ValueError("Mappings for DebianPackage failed")
-                            copymaps[target] = result._getReturnValue('package')
-                        installmap['copyright'] = copymaps[target]
+                        copiesright = target.split(',')
+                        installmap['copyright'] = []
+                        for copyright in copiesright:
+                            target = copyright.strip()
+                            if target not in copymaps:
+                                result = self.engine.launchStep(
+                                    target,
+                                    'package' )
+                                if result is None or not result._didPass():
+                                    self.log.error("%s step failed", target)
+                                    self.log.failed()
+                                    raise ValueError("Mappings for DebianPackage failed")
+                                copymaps[target] = result._getReturnValue('package')
+                            installmap['copyright'].append(copymaps[target])
                     else:
                         installmap[mappart] = target
                 results.append(installmap)

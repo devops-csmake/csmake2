@@ -1,4 +1,5 @@
 # <copyright>
+# (c) Copyright 2018 Cardinal Peak Technologies, LLC
 # (c) Copyright 2017 Hewlett Packard Enterprise Development LP
 #
 # This program is free software: you can redistribute it and/or modify it
@@ -25,7 +26,7 @@ test=Run testing for csmake
 
 [metadata@csmake]
 name=csmake
-version=1.5.23
+version=1.5.24
 description=build scripting tool allowing a completely specified build process
 about=Most build tools are centered around the idea of delivering one or a
  handful of results based around a single tool or development path.
@@ -56,14 +57,14 @@ about=Most build tools are centered around the idea of delivering one or a
  make (csmake).
  .
  Python coverage is needed if you want to use the python testing
-packager=Jeremiah Patterson <jerpat@hpe.com>
-manufacturer=Hewlett Packard Enterprise
+packager=Jeremiah Patterson <jerry@casecracker.com>
+manufacturer=Cardinal Peak Technologies, LLC
 depends=python (>= 2.6)
 recommends=python-coverage, chrpath
 suggests=csmake-swak, csmake-packaging, csmake-providers
 keywords=make build development
 url=https://rndwiki.corp.hpecorp.net/confluence/display/cloudos/CsMake
-copyrights=csmake-copyright
+copyrights=csmake-copyright, csmake-cpt-copyright
 classifiers=
     Development Status :: 4 - Beta
     Intended Audience :: Developers
@@ -98,13 +99,18 @@ license=GPLv3
 holder=Hewlett Packard Enterprise
 years=2014-2017
 
+[copyright@csmake-cpt-copyright]
+license=GPLv3
+holder=Cardinal Peak Technologies, LLC
+years=2018
+
 [AsciiGPGSignature@default-ascii-signer]
 [DebianPackage@debian-csmake-signed]
 package-version=1.0
 default_python-script={root}/usr/bin/
 maps=csmake-installs
 result=%(RESULTS)s/debpackage
-debian-directory-copyright=csmake-copyright
+debian-directory-copyright=csmake-cpt-copyright
 signer=default-ascii-signer
 
 [Signature@default-signer]
@@ -120,7 +126,7 @@ package-version=1.0
 default_python-script={root}/usr/bin/
 maps=csmake-installs
 result=%(RESULTS)s/debpackage
-debian-directory-copyright=csmake-copyright
+debian-directory-copyright=csmake-cpt-copyright
 
 [versioning@snapshot-version]
 designation=snapshot
@@ -153,25 +159,25 @@ group_root=root
 
 map_bin_files=
    map: <bin> -(1-1)-> {PYTHON_SCRIPT}/{~~file~~}}
-   copyright: csmake-copyright
+   copyright: csmake-copyright, csmake-cpt-copyright
    owner:{root}
    group:{root}
    permissions: 755
 map_Csmake=
    map: <Csmake> -(1-1)-> {PYTHON}/Csmake/{~~file~~}}
-   copyright: csmake-copyright
+   copyright: csmake-copyright, csmake-cpt-copyright
    owner:{root}
    group:{root}
    permissions: 644
 map_CsmakeModules=
    map: <CsmakeModules> -(1-1)-> {PYTHON}/Csmake/CsmakeModules/{~~file~~}}
-   copyright: csmake-copyright
+   copyright: csmake-copyright, csmake-cpt-copyright
    owner:{root}
    group:{root}
    permissions:644
 map_manpages=
    map: <(:manpage)> ~~man/(.*)[.]([1-9]) -(1-1)-> ~~{INSTALL_ROOT}/usr/share/man/man\2/\1.\2.gz
-   copyright: csmake-copyright
+   copyright: csmake-copyright, csmake-cpt-copyright
    owner:{root}
    group:{root}
    permissions:644
@@ -232,7 +238,8 @@ description=Create and package a csmake release
 [command@signed]
 description=Create and package a signed deb and rpm
 00=csmake, common-package-steps
-10=debian-csmake-signed & rpm-csmake-signed
+#10=debian-csmake-signed & rpm-csmake-signed
+10=debian-csmake-signed , rpm-csmake-signed
 
 ######################################################3
 # Testing definitions

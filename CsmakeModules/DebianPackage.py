@@ -1,4 +1,5 @@
 # <copyright>
+# (c) Copyright 2018 Cardinal Peak Technologies, LLC
 # (c) Copyright 2017 Hewlett Packard Enterprise Development LP
 #
 # This program is free software: you can redistribute it and/or modify it
@@ -227,22 +228,32 @@ can be found in /usr/share/common-licenses/LGPL-2.1 file.""",
 
     def _writeCopyright(self, copyrightFile, copyright, path):
         self.log.devdebug("copyright to write for (%s) is : %s", path, str(copyright))
+        if copyright is None:
+            return
         if path is not None:
             copyrightFile.write(
                 "Files: %s\n" % path )
-        copyrightFile.write(
-            "Copyright: %s %s\n" % (
-                copyright['years'],
-                copyright['holder'] ) )
-        license = copyright['license'].strip()
+        disclaimers = []
+        copystring = "Copyright: "
+        for right in copyright:
+            copyrightFile.write(
+                "%s %s %s\n" % (
+                    copystring,
+                    right['years'],
+                    right['holder'] ) )
+            copystring = "   "
+            #TODO: What to do if differing licenses?
+            license = right['license'].strip()
+            if 'disclaimer' in right:
+                disclaimers.append(right['disclaimer'].strip())
         copyrightFile.write(
             "License: %s\n" % license)
         if license in DebianPackage.LICENSE_TEXTS:
             copyrightFile.write(DebianPackage.LICENSE_TEXTS[license])
             copyrightFile.write('\n')
-        if 'disclaimer' in copyright:
+        if len(disclaimers) > 0:
             copyrightFile.write(
-                "Disclaimer: %s\n" % copyright['disclaimer'] )
+                "Disclaimer: %s\n" % '\n'.join(disclaimers))
         copyrightFile.write('\n')
 
     #Can't do _control_md5sums, because there is no guaranteed ordering
@@ -274,17 +285,14 @@ can be found in /usr/share/common-licenses/LGPL-2.1 file.""",
                 defaults = [control['default']]
             else:
                 defaults = control['default']
-            for default in defaults:
-                self._writeCopyright(
-                    copyrightFile,
-                    default,
-                    None )
-
-            for default in defaults:
-                self._writeCopyright(
-                    copyrightFile,
-                    default,
-                    '*' )
+            self._writeCopyright(
+                copyrightFile,
+                defaults,
+                None )
+            self._writeCopyright(
+                copyrightFile,
+                defaults,
+                '*')
 
         copyrightPath = os.path.join(
             'usr/share/doc',
