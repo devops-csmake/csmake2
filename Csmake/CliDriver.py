@@ -112,7 +112,7 @@ class CliDriver(object):
             defaultMetadata )
 
 
-    def find_module(self, fullname, path):
+    def find_module(self, fullname, path=None):
         """This is called by python - we do this so that if a module
            imports another module, it has the same import behavior
            as the module lookup"""

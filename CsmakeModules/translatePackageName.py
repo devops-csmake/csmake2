@@ -1,4 +1,5 @@
 # <copyright>
+# (c) Copyright 2018 Cardinal Peak Technologies, LLC
 # (c) Copyright 2017 Hewlett Packard Enterprise Development LP
 #
 # This program is free software: you can redistribute it and/or modify it
@@ -48,27 +49,56 @@ class translatePackageName(CsmakeModuleAllPhase):
        Options:
            <key> - <package name(s)>
                    Where <key> is the packaging scheme target
-                   <package name(s)> is the name(s) of the package
-                        in the given format
-           ~~format~~ - Modules invoking this section should supply this field
-                        however, if this is supplied in the build spec, then
-                        this value will override what the calling section
-                        attempts to define.
-                        If this section is undefined, the original string
-                        will be passed through.
+                   'package name(s)' is the name(s) of the package
+                        in the given format.  The full 'depends' syntax
+                        may be used.
+                   Leaving 'package name(s)' empty indicates that the
+                        package is not required for the platform indicated
+                        by '<key>'.
+                   NOTE: The default Packager behavior is to do the following
+                      1) If a single package is specified, and no version
+                         is specified, the version tied to the original package
+                         name from the metadata is used (if any)
+                      2) If multiple packages are specified,
+                         a version specifier '{version}' will use the
+                         original version.  e.g.:
+                         From the metadata:
+
+                         [metadata@mypackage-metadata]
+                         ...
+                         depends: mydep (<= 5.4.3)
+
+                         in the translate section (say we're doing rpms):
+                         [translatePackageName@~~mydep~~]
+                         rpm = thisotherdep (< 2.1), mydep-g1 ({version})
+
+                         mydep-g1 would get the same version: <= 5.4.3
+                      (N.B.: Specific Packager implementations may do
+                         something different)
+
+           ~~format~~ - (NOT RECOMMENDED, OPTIONAL)
+                   Normally, the Packager based module will define this field
+                   However, if for some reason you want to set this
+                   (say you have non-conforming key or Packager needs)
+                   You can use this option to tell this section which key to
+                   use.
        Example:
            [metadata@myproduct]
            name: myproduct
-           depends: python, anotherproduct
+           depends: python (> 2.7.11), anotherproduct
 
            #The ~~ avoids collision with the python section
            [translatePackageName@~~anotherproduct~~]
            rpm=another-project, another-project-devel
            alpine=anotherpjt
+           #This would say that the "anotherproduct" dependency isn't necessary
+           #  for the cygwin platform:
+           cygwin=
 
            [translatePackageName@~~python~~]
-           rpm=python-minimal, python-devel
-           debian=python, python-dev
+           rpm=python-minimal ({version}), python-devel
+           debian=python ({version}), python-dev
+           cygwin=python (> 2.5.2)
 
            [Shell@python]
            command=python -m myMod
