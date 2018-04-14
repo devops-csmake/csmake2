@@ -1,11 +1,12 @@
 # Tutorial 1: Hello, csmake!
 
 In this tutorial, you'll learn the basics of how csmake operates to construct a desired result.  In order to keep the tutorial easy to follow and execute, some of the finer points for this tutorial are reserved for the appendix at the end.
-Goals for this Tutorial
 
-    Gain a basic understanding of how to start a csmake project from scratch
-    Understand the basic operation of a csmakefile specification and csmake
-    Learn how to set up a basic build using csmake
+## Goals for this Tutorial
+
+* Gain a basic understanding of how to start a csmake project from scratch
+* Understand the basic operation of a csmakefile specification and csmake
+* Learn how to set up a basic build using csmake
 
 ## Step 1: Ensure csmake is installed
 For this tutorial, you only need to have csmake installed.  If you haven't done this yet, please do this now.
@@ -17,10 +18,7 @@ cd csmake-tutorial-1
 ```
 
 ## Step 3: Create a csmakefile
-```
-vi csmakefile
-```
-And in the editor enter
+Open an editor and enter the following text:
 
 ```
 [Shell@hello]
@@ -103,7 +101,7 @@ Then you will see:
 Hello, csmake!
 ```
 
-The --quiet option suppresses the csmake output that provides guideposts for what the tool is doing.  While it can be quite verbose, the purpose is to help navigate and understand exactly what the tool is doing for complex builds (like DIB appliance builds, for example).  The output is designed to provide quick visual queues to sort through tremendous amounts of otherwise un-human-parsable output to find and pinpoint problems quickly.  There are times, however, when it is useful to strip this output away so that the actual results of performing the steps can be seen together, –quiet will help a user see this.  --quiet along with --dev-output can be helpful as well for tracking down issues when csmake performs a step or fails to perform a step that you thought it should not or should.
+The `--quiet` option suppresses all csmake output.
 
 ### Tutorial 1 Appendix
 
@@ -111,16 +109,20 @@ This appendix is designed to help gain a finer understanding of the reasons why 
 
 #### Understanding the csmakefile
 
-The csmakefile is basically a modified "INI" style file.  Just like with an INI file, a csmakefile has sections and key-value pairs for each section.  The csmakefile has a slightly more specific format than a regular "INI" file. For example, each section definition is of the form:
+The csmakefile is a Python "INI" style file.  Just like with an INI file, a csmakefile has sections and key-value pairs for each section.
+
+The csmakefile has a slightly more specific format than a regular "INI" file. For example, each section definition is of the form:
 ```
 [<section type>@<id>]
 ```
 
-The \<section type\> is implemented by a specific kind of python module that has been defined in a CsmakeModules directory (later tutorials will explore how CsmakeModules directories work).  The \<id\> is simply just a handle to allow you to distinguish between sections of identical type and for ease of reference.
+The *\<section type\>* is implemented by a specific kind of python module that has been defined in a CsmakeModules directory (later tutorials will explore how CsmakeModules directories work).  The *\<id\>* is simply just a handle to allow you to distinguish between sections of identical type and for ease of reference.
 
-You may note that csmakefiles are declarative, that is, their purpose (like with SQL, for example) is simply to state what should happen.  This may feel somewhat cumbersome at times, because you must fully declare what you expect the build to do.  Everything you see in the specification has been defined as a module, even clear down to the control sections such as "command" that you see above.
+Note that csmakefiles are declarative, that is, their purpose (like with SQL, for example) is simply to state what should happen.  Everything must fully declare what the build is expected to do.  There's no hidden behavior or special rules to shoehorn the tool into doing something special.  Everything in the specification has been defined as a module, including "control structure" sections such as "command" as seen above.
 
-The key-value pairs provided under a given section are consumed by the section type module implementation.  These key-value pairs are extremely free-form, which makes it easy to express just about anything that is necessary to express in a csmakefile.  This, however, can also make csmakefiles feel complex and unwieldy as it appears that the form, structure, and syntax of a csmakefile will flow in almost a natural language feel because each section can define the kind of syntax it can take in (while keeping with the "INI" type key-value basic syntax). The values of a csmakefile key-value pair can also be multiline.  In an INI file a key must start in the first column, not contain spaces, and be followed by an '=' (equals) sign.  If any one of these conditions are not met, the line in the csmakefile specification will be part of the previous key.  For example:
+The key-value pairs provided under a given section are consumed by the section type module implementation.  These key-value pairs are extremely free-form, which makes it easy to express just about anything that is necessary to express in a csmakefile.  This, however, can also make csmakefiles feel unwieldy as it appears that the form, structure, and syntax of a csmakefile will ebb and flow from bash to python to expressions and syntax unique to individual sections whilst keeping with the "INI" type key-value basic syntax.
+
+In an INI file, a key must start in the first column, not contain spaces, and be followed by an '=' (equals) sign.  If any one of these conditions are not met, the line in the csmakefile specification will be part of the previous key.  For example:
 ```
 [MySectionType@my]
 single_line=This is a value passed in for 'my'
@@ -135,16 +137,21 @@ The multi\_line result that the section implementation sees is literally:
 ```
  "This is\nanother=value\n*   passed in\nto the section 'my'"
 ```
-Notice first, that any leading and trailing white space for a multiline value is discarded.  There are times when the whitespace can be meaningful, so use of a delimiter like '\*' as seen above, is used to keep the left side spacing correct (putting a patch inline or, say, python code in a build specification may require the use of a left-hand-side (lhs) delimiter to denote where the left hand side of the lines start and  process the contents based on this as necessary.
+Notice first, that any leading and trailing white space for a multiline value is discarded.  There are times when the whitespace can be meaningful, so use of a delimiter like '\*' as seen above, is used to keep the left side spacing correct (putting a patch inline or, say, python code in a build specification may require the use of a left hand side delimiter to denote where the left hand side of the lines start and process the contents based on this as necessary.
 
-Because of the possibility of various input styles for a given section, a given csmakefile can appear hard to read, disjoint, and vary in syntax.  As mentioned above, the syntax of the file itself is very regular and specific, but is extremely flexible, allowing for bash scripts, next to simple string input, next to some python code.  Every section specified in the csmakefile has documentation associated with it that can be accessed using --list-type.  For example:
+As mentioned above, the syntax of the csmakefile itself is very regular and specific, but is also extremely flexible, allowing for bash scripts, next to simple string input, next to some python code.  Even though it may make a csmakefile confusing at first glance, this is one of the strengths of the tool: the ability to express and pull together all of the parts and processes of a complex build into a single specification.
+
+Every section specified in the csmakefile has documentation associated with it that can be accessed using --list-type.  For example:
+```
 csmake --list-type=Shell
+```
 
-Will list the documentation for the "Shell" module.  You can also list all of the available types using "--list-types".  The documentation for the sections available from the current working directory will be output in (ASCII) alphabetical order, meaning capital lettered sections will be listed before lower case sections.  This is actually helpful here because by convention, the "core" or "special" csmake sections should all start lowercase.  Some examples of these special sections include: command, subcommand, include, metadata, versioning, etc.
+will list the documentation for the "Shell" module.  You can also list all of the available types using "--list-types".  The documentation for the sections available from the current working directory will be output in (ASCII) alphabetical order, meaning capital lettered sections will be listed before lower case sections.  By convention, the "core" csmake sections should all start lowercase, thus listed at the end of the --list-types output.  Some examples of these special sections include: command, subcommand, include, metadata, and versioning.
+
+An individual section type's documentation may be accessed using `--list-type`
 
 Here's a full example of requesting the documentation for one of the most key modules, command:
 
-#### command Documentation Example
 ```
 $ csmake --list-type=command
 
@@ -169,19 +176,46 @@ Example:
     02 = createPond
     03 = stockFish
 ```
-Understanding the csmake command line
+
+#### Understanding the csmake Command Line
 
 The basic csmake command line structure is:
+```
 csmake <flags> <phases>
+```
 
-where <flags> are the list of flags that is listed by doing --help and <phases> is one or more build phases.
---command
+where `<flags>` are the list of flags (use `--help` for a listing of possible flags) and `<phases>` is one or more build phases (which are specific to the csmakefile used, and if defined in the csmakefile explicitly, can be listed using `--list-phases`).
 
-The most important flag is --command.  This flag tells csmake where to begin building.  If this is unspecified, csmake will look for a command section to execute starting with looking for "command@" (that is a command section in the csmakefile with no id), failing this, it will look for "command@default" and failing this, it will grab the first command section it finds (which may or may not be the topmost command section in the csmakefile - remember that csmakefiles are declarative and use an INI format, which means that ordering of processing is not guaranteed to be in file order.  This is why, for example, the keys for the options to a command that execute other csmake sections are specified to be executed in alpha-numeric order. Likewise, the keys in each section are not  necessarily processed from top to bottom.
+##### The --command Flag
 
-Commands that are available to use with --command may be listed by using --list-commands with csmake.  Here's an example from our CloudSystem appliance build repository (cloudsystem-appliance-build):
---list-commands Example
-$ cd path/to/your/cloudsystem-appliance-build
+The executed entry point for processing in csmake is defined using the
+`--command` flag.
+
+"command" sections in the csmakefile define which entrypoints are expected
+in a csmakefile.
+
+The default command in a csmakefile when the command flag is omitted from
+the command line is:
+
+```
+[command@]
+```
+
+If an id-less command section is not found, the next target is:
+
+```
+[command@default]
+```
+
+If this is also not defined, csmake will take a command section of its choosing
+and execute that section (this is not suggested practice).
+
+The goal should be for the csmakefile developer to have the default command
+do what your developer would expect to be the most helpful thing.
+
+All available commands may be listed by using the `--list-commands` flag on the command line.  Here's an example from a very complex csmakefile:
+
+```
 $ csmake --list-commands
  
 ================= Defined commands =================
@@ -223,21 +257,79 @@ e.g., --command=jenkins, base-foundation
     local-sdn - (Local) Create a sdn appliance from a base sdn image
 ============= Suggested Multicommands ==============
     local, <appliance>: builds a local build of the appliance
-    : NOTE: edit csmakefile to point to your cloudsystem
     jenkins, <appliance>: does a jenkins build of the appliance
     rc, <appliance>: does an rc versioned build of the appliance
     pr, rc, <appliance>: does a partner release release candidate
     pr, <appliance>: does a final partner release
     <appliance>: does a final release
+```
 
-The documentation associated with the commands are provided from the actual command sections from the "description" option of the command
-Phases
+The documentation associated with the commands are provided from the
+`command` sections' "description" options, e.g.:
 
-Phases are used to control the actions or set of actions each module will take based on what is called out in the csmakefile.  When a phase is specified on the csmake command line, csmake will dispatch that message to the implementation of every build section from the --command specified in csmake.  So, for example," csmake build" will tell csmake to send "build" to every section's implementation instance when executing. "csmake clean" would send "clean" to every section implementation.  "csmake clean build" would send "clean" to every section specified in the default command, followed by sending "build" to the same sections.
+```
+[command@local-swift]
+description=(Local) Create a swift appliance from a base swift image
+```
 
-Optionally, a csmakefile may contain a "~~phases~~" section which is a built in csmake module.  The documentation for the section may be obtained in the standard way described above: csmake --list-type=~~phases~~.  Phases will give a short description of all the valid phases, combination of phases, the default sequence of phases, and any suggested multicommands (a "multicommand" is when several commands are given to --command, e.g., csmake --command=local,foundation.  The information contained in the ~~phases~~ section can be accessed from the command line using "--list-phases".  Here is an example of list-phases from the cloudsystem-appliance-build repository:
---list-phases Example
-$ cd /path/to/cloudsystem-appliance-build
+###### Multicommands
+
+Multicommands are a way to launch several sections in a single execution.
+The syntax for launching a multicommand is the same that you would use when
+writing a line in a "command" section in a csmakefile.
+
+For example, you might say:
+```
+$ csmake --command "local-swift & local-monasca & local-update"
+```
+
+And csmake would start doing all three commands in parallel
+
+Multicommands are especially helpful for complex builds when most of each of
+the builds are the same.  For example, above, you see various multicommands
+suggested that have prefixes that help define the final purpose of the build.
+
+Practices may differ on how this is used, but some suggestions include:
+* A prefix command that specifies the build is a pre-release
+* A prefix command that defines one of several environments for a build
+* A postfix command that defines which backend to store a build to
+
+Essentially, use of a multicommand is preferred to using branching (which isn't
+provided in csmake) or shell environment variables to define how a build
+should operate.  Obviously, there are times when use of shell environment
+variables can be useful if well documented, but this should be avoided whenever
+possible to make each build self-contained.
+
+#### Build Phases
+
+Phases are used to control the actions or set of actions each module will take
+based on what is called out in the csmakefile.  When a phase is specified on
+the csmake command line, csmake will dispatch that message to the
+implementation of every build section from the `--command` specified in 
+csmake.
+
+So, for example:
+* `csmake build` will tell csmake to send the `build`
+message to every section's implementation evaluated from the csmakefile's
+default command. 
+* `csmake clean` would send "clean" to every section implementation.
+* `csmake clean build` would send "clean" to every section specified in the
+default command, followed by sending "build" to the same sections.
+
+Optionally, a csmakefile may contain a `[~~phases~~]` section which is a
+built in csmake module.  The documentation for the section may be obtained
+in the standard way described above: `csmake --list-type=~~phases~~`.  
+
+This will provide a short description of all the valid phases (as explicitly
+defined in the `~~phases~~` section, anticipated combinations of phases and
+descriptions of what they do, the default sequence of phases (the phases csmake
+will perform if no phases are listed on the command line), and any suggested
+ multicommands.  The information contained in the `~~phases~~` section can be
+accessed from the command line using `--list-phases`.
+
+Here is an example:
+
+```
 $ csmake --list-phases
  
 =================== Valid Phases ===================
@@ -252,44 +344,49 @@ Default sequence: clean_results -> build -> clean_build
    (Executed when phase(s) not given on command line)
 ============= Suggested Multicommands ==============
     local, <appliance>: builds a local build of the appliance
-    : NOTE: edit csmakefile to point to your cloudsystem
     jenkins, <appliance>: does a jenkins build of the appliance
     rc, <appliance>: does an rc versioned build of the appliance
     pr, rc, <appliance>: does a partner release release candidate
     pr, <appliance>: does a final partner release
     <appliance>: does a final release
+```
 
-The command line can feel a bit overwhelming at first because the output for --help is currently very verbose.  However, csmake is designed to be executed with a minimum amount of flags and phases by defining defaults, while allowing users to customize specific builds by using other flags or specifying specific phases to execute. 
+#### --help Flag and Friends
 
 Several of the flags provide help:
---help - gives the flags available for use with csmake
---list-type=<module type> - provides help for a single section module type
---list-types - provides the help for all available section module types
---list-commands - provides a list of valid commands and multicommands (if specified in ~~phases~~) that can be used with a build
---list-phases - provides a list of valid phases, combinations of phases, the default combination of phases, and multicommands
+
+* `--help` - brief synopsis flags available for use with csmake
+* `--help --verbose` - full command line flag help
+* `--list-type=<module type>` - provides help for a single section module type
+* `--list-types` - provides the help for all available section module types
+* `--list-commands` - provides a list of valid commands and multicommands
+* `--list-phases` - provides a list of:
+   - valid phases
+   - combinations of phases
+   - the default combination of phases
+   - and multicommands
                 (if provided by a ~~phases~~ section)
---help-all - will dump all available information about what can be given on the command line to operate csmake for the current directory.
+* `--help-all` - will dump all available information
+
+#### Output Verbosity Flags
 
 Some of the flags provide control over how much output csmake will provide. 
 
-By default, csmake will provide all its visual cues and any WARNINGs and ERRORs (and CRITICALs and EXCEPTIONs) that a build produces. 
+By default, csmake will provide all its visual cues and any WARNINGs, ERRORs, and EXCEPTIONs (and CRITICALs as well) that a build produces. 
 
 Here is a list of the flags that will help control levels of output:
---verbose - will also allow "INFO" sections.
---debug - will also allow "INFO" and "DEBUG" sections.
-          This will also turn on any stack traces produced from a failed build or exception.
---quiet - Turn off all visual cues, Turn off all WARNING and ERROR messages.
---dev-output - will turn on very verbose output that describes the specific workflow csmake is executing,
-               including decisions about when to, or to not execute a section, whether the dispatch of the phase
-               to a section was successful (and what specifically was successful), the current operating environment
-               before each section is executed, and any other information specified in a section's module
-               implementation pertaining to what a module developer might need to understand
-               why their module isn't working as expected.
-               (the --dev-output flag operates independently of --quiet, --verbose, and --debug
-                ... --quiet --dev-output together can sometimes be helpful to see only the csmake execution flow, for example)
---log - will send the csmake output to the path specified for --log.
 
-The rest of the flags are used to control some aspect of the execution flow of csmake itself and are used less often in the course of doing everyday builds with csmake.  The documentation for these flags can be found by invoking --help.
+* `--verbose` - will also allow "INFO" output.
+* `--debug` - will also allow "INFO" and "DEBUG" output.
+   - This will also turn on any stack traces produced from a failed build or exception.
+* `--quiet` - Turn off all visual cues, Turn off all WARNING and ERROR messages.
+* `--dev-output` - will turn on very verbose output that describes the
+                   specific workflow csmake is executing
+   - This operates independently of --quiet, --verbose, and --debug
+* `--no-chatter` - Turns off banner decorations
+* `--log` - will send the csmake output to the path specified for --log.
+
+The rest of the flags are used to control various aspects of the execution flow of csmake itself and are used less often in the course of doing everyday builds with csmake.  The documentation for these flags can be found by invoking `--help`.
 
 <sub>This material is under the GPL v3 license:
 
