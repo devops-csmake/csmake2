@@ -856,28 +856,30 @@ class CliDriver(object):
                 resultObject.failed()
             return execinstance
         finally:
-            self.launchAspects(
-                aspects,
-                'end',
-                phase,
-                execinstance,
-                stepdict)
-            if pushedModule:
-                if self.launchStack[-1] is not execinstance:
-                    self.log.error("DEVERROR: Launch stack not pointing to current launch")
-                    self.log.devdebug("stack top: %s    Instance: %s" %(
-                        self.launchStack[-1],
-                        execinstance ) )
-                elif self.launchStack[-1] is self:
-                    self.log.error("DEVERROR: Launch stack pointing to engine: Cannot pop")
-                else:
-                    self.launchStack.pop()
+            try:
+                self.launchAspects(
+                    aspects,
+                    'end',
+                    phase,
+                    execinstance,
+                    stepdict)
+            finally:
+                if pushedModule:
+                    if self.launchStack[-1] is not execinstance:
+                        self.log.error("DEVERROR: Launch stack not pointing to current launch")
+                        self.log.devdebug("stack top: %s    Instance: %s" %(
+                            self.launchStack[-1],
+                            execinstance ) )
+                    elif self.launchStack[-1] is self:
+                        self.log.error("DEVERROR: Launch stack pointing to engine: Cannot pop")
+                    else:
+                        self.launchStack.pop()
 
-            if resultObject is not None:
-                resultObject.chatStatus()
-                resultObject.chatEnd()
-            self.log.devdebug(" Step Completed: %s" % section)
-            self.log.devdebug("-----------------------------------------")
+                if resultObject is not None:
+                    resultObject.chatStatus()
+                    resultObject.chatEnd()
+                self.log.devdebug(" Step Completed: %s" % section)
+                self.log.devdebug("-----------------------------------------")
 
     def includeBuildspec(self, spec):
         if not os.path.isfile(spec):
