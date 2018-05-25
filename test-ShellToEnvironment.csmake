@@ -1,4 +1,5 @@
 # <copyright>
+# (c) Copyright 2018 Cardinal Peak Technologies
 # (c) Copyright 2017 Hewlett Packard Enterprise Development LP
 #
 # This program is free software: you can redistribute it and/or modify it
@@ -17,9 +18,16 @@
 
 [ShellToEnvironment@myshellenv]
 hello=MYSHELLVAR
+another=MYOTHERVAR:default:this
 
 [Shell@testmyshellenv]
 command=echo %(hello)s
 
+[Shell@testanother]
+command=echo %(another)s
+
 [command@default]
 00=myshellenv, testmyshellenv
+
+[command@another]
+00=myshellenv, testanother

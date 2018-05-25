@@ -1,4 +1,5 @@
 # <copyright>
+# (c) Copyright 2018 Cardinal Peak Technologies
 # (c) Copyright 2017 Hewlett Packard Enterprise Development LP
 #
 # This program is free software: you can redistribute it and/or modify it
@@ -28,20 +29,25 @@ class ShellToEnvironment(CsmakeModuleAllPhase):
                   behind csmake
                 *Options substitutions, e.g., %(var)s, are NOT allowed*
        Phases: *any*
-       Options: Adds all flags into the environment for future steps
+       Options: <shell variable>[:<default value>]
+                Adds all flags into the environment for future steps
                 The value is a shell variable that should have been
                 defined before csmake was executed.
+                A default value may be added using a colon ':' followed
+                by the default value
        Example:
            [ShellToEnvironment@pull-parameters]
            csmake-build-number=BUILDNO
-           branch-to-pull=BRANCH
+           branch-to-pull=BRANCH:master
 
            The 'pull-parameters' section would pull 'BUILDNO' from the
            shell enivronment that csmake is executing from and place it
            in the csmake environment variable called "csmake-build-number"
            Likewise with 'BRANCH', 'branch-to-pull' would be set to
            whatever ${BRANCH} would evaluate to from the shell that launched
-           csmake.
+           csmake.  
+           If BRANCH isn't defined in the shell environment, the 'master'
+              is used in its place.
     """
 
     def __repr__(self):
@@ -58,11 +64,19 @@ class ShellToEnvironment(CsmakeModuleAllPhase):
         for option, shellkey in options.iteritems():
             if option.startswith("**"):
                 continue
+            default_value = None
+            if ':' in shellkey:
+                shellkey, default_value = shellkey.split(':',1)
             if shellkey not in os.environ:
-                self.log.error("'%s' was not defined in the shell environment", shellkey)
-                self.log.failed()
-                return False
-            self.env.env[option] = os.environ[shellkey]
+                if default_value is None:
+                    self.log.error("'%s' was not defined in the shell environment", shellkey)
+                    self.log.failed()
+                    return False
+                else:
+                    self.log.info("Default value for %s used: %s", shellkey, default_value)
+                    self.env.env[option] = default_value
+            else:
+                self.env.env[option] = os.environ[shellkey]
         self.log.passed()
         return True
 

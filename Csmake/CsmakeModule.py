@@ -1,4 +1,5 @@
 # <copyright>
+# (c) Copyright 2018 Cardinal Peak Technologies
 # (c) Copyright 2017 Hewlett Packard Enterprise Development LP
 #
 # This program is free software: you can redistribute it and/or modify it
@@ -313,7 +314,7 @@ class CsmakeModule:
             directory, filename = os.path.split(path)
         else:
             directory = path
-        if len(directory) > 0 and not os.path.exists(directory):
+        if len(directory) > 0 and not os.path.lexists(directory):
             os.makedirs(directory)
 
     def _cleanEnsuredDirectory(self, path, isdirectory=False):

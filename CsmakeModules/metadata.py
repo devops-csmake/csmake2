@@ -1,4 +1,5 @@
 # <copyright>
+# (c) Copyright 2018 Cardinal Peak Technologies
 # (c) Copyright 2017 Hewlett Packard Enterprise Development LP
 #
 # This program is free software: you can redistribute it and/or modify it
@@ -45,6 +46,11 @@ class metadata(CsmakeModuleAllPhase):
                 current again.
        Phases: *any*
        Options:
+           **use-parent-filetracking:  Adding this flag to the section
+                will ensure that filetracking will not be scoped
+                by this metadata section.
+                Without this flag, filetracking is scoped for each
+                metadata set.
            NOTE: (<lang>) after the option
                  will specify value in a different language
                  en_US is default.
@@ -319,6 +325,7 @@ class metadata(CsmakeModuleAllPhase):
                     value ) )
 
     def default(self, options):
+        currentFileTracking = self.env.metadata.getCurrent().files
         self.original = {}
         self.languages = {'en_US' : self.original}
         self.version = {}
@@ -345,6 +352,8 @@ class metadata(CsmakeModuleAllPhase):
             return w.metadata.original
         for key, value in options.iteritems():
             if key.startswith("**"):
+                if key == '**use-parent-filetracking':
+                    self.files = currentFileTracking
                 continue
             if key.endswith(')'):
                 keyparts = key.split('(')
