@@ -22,3 +22,29 @@ command=echo Success
 
 [command@file-before-metadata]
 00=test-filetracking-before-metadata
+
+[subcommand@get-files]
+**files=<code (shell-script:test)> RUNTESTS.sh
+
+[metadata@test-file-pass-meta]
+**use-parent-filetracking=True
+name=t
+version=1.0.0
+
+[metadata@test-no-pass-meta]
+name=t
+version=1.0.0
+
+[Shell@echo-py-files]
+**maps=<code> -(1-1)-> {~~path~~}/{~~file~~}
+command=for x in $_MAPPING
+    do
+        MYFILE="$(_froms $x)"
+        echo ${MYFILE##*/}
+    done
+[command@files-kept-thru-metadata]
+00=get-files, test-file-pass-meta, echo-py-files
+
+[command@ensure-files-not-kept-thru-metadata]
+00=get-files, test-no-pass-meta, echo-py-files
+

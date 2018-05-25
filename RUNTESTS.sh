@@ -1,5 +1,6 @@
 #!/bin/bash
 # <copyright>
+# (c) Copyright 2018 Cardinal Peak Technologies
 # (c) Copyright 2017 Hewlett Packard Enterprise Development LP
 #
 # This program is free software: you can redistribute it and/or modify it
@@ -227,6 +228,8 @@ After basic-aspect"
 #Test ShellToEnvironment
 dotest-fail ShellToEnvironmentFail test-ShellToEnvironment.csmake default build
 MYSHELLVAR=blah dotest-cmp ShellToEnvironmentPass test-ShellToEnvironment.csmake default build "blah"
+MYSHELLVAR=this dotest-cmp ShellToEnvironmentAnotherDefault test-ShellToEnvironment.csmake another build "default:this"
+MYOTHERVAR=notdefault MYSHELLVAR=that dotest-cmp ShellToEnvironmentAnotherDefault test-ShellToEnvironment.csmake another build "notdefault"
 
 #Test metadata
 dotest-default metadata-twolevels testmetadata.csmake
@@ -237,6 +240,8 @@ dotest-cmp versioning-mods testmetadata.csmake test-versioning prep "9!~111.123+
 
 #Test file tracking
 dotest file-before-metadata test-filetracking.csmake file-before-metadata build
+dotest-cmp files-kept-thru-metadata test-filetracking.csmake files-kept-thru-metadata build "RUNTESTS.sh"
+dotest-cmp ensure-files-not-kept-thru-metadata test-filetracking.csmake ensure-files-not-kept-thru-metadata build ""
 
 #Test TestPython
 dotest-default test-TestPython test-TestPython.csmake
