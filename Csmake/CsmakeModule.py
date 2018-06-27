@@ -342,10 +342,10 @@ class CsmakeModule:
         #Get the file manager
         fileManager = self._getFileManager()
         if fileManager is not None:
-            if self.log.devoutput:
-                self.log.devdebug(" ------- ")
-                self.log.devdebug(" File manager state")
-                self.log.devdebug(str(fileManager))
+            if self.log.filetrack:
+                self.log.filetrackerOut(" ------- ")
+                self.log.filetrackerOut(" File manager state")
+                self.log.filetrackerOut(str(fileManager))
         else:
             self.log.error("File Tracking can only be utilized with metadata defined")
             return
