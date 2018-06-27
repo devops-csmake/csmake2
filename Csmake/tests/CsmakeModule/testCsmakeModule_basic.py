@@ -26,7 +26,7 @@ class testCsmakeModule_basic(unittest.TestCase):
 
     class FakeEngine:
         def __init__(self):
-            self.settings = {'dev-output':True, 'debug':False,'verbose':False,'quiet':False, 'no-chatter':False}
+            self.settings = {'dev-output':True, 'debug':False,'verbose':False,'quiet':False, 'no-chatter':False, 'file-tracking':False}
             self.log = None
     
     def _createaCUT(self):

@@ -1,209 +1,392 @@
-Tutorial 2: Creating OVAs from VMDKs
+# Tutorial 1: Hello, csmake!
 
-In this tutorial, you will learn the basics of how csmake does:
+In this tutorial, you'll learn the basics of how csmake operates to construct a desired result.  In order to keep the tutorial easy to follow and execute, some of the finer points for this tutorial are reserved for the appendix at the end.
 
-    Basic file tracking
-    Management of modules to complete specific tasks
-    Reuse of modules built for a different, but related task
+## Goals for this Tutorial
 
-This tutorial assumes you know how to operate the monolithic CloudSystem appliance builds, or can otherwise generate vmdk's that you can/want to package into ovas.
+* Gain a basic understanding of how to start a csmake project from scratch
+* Understand the basic operation of a csmakefile specification and csmake
+* Learn how to set up a basic build using csmake
 
-Having git installed on your system is required if you wish to get the csmake modules used in this tutorial from the cloudsystem-appliance-build repository.
+## Step 1: Ensure csmake is installed
+For this tutorial, you only need to have csmake installed.  If you haven't done this yet, please do this now.
 
-Having Internet access set up on your system is required if you wish to follow steps in the appendix to build your own qemu-img and vbox-img packages.
+## Step 2: Create a new directory to do the tutorial
+```
+mkdir csmake-tutorial-1
+cd csmake-tutorial-1
+```
 
-A 64-bit Linux (amd64) debian-based distro operating system is required
+## Step 3: Create a csmakefile
+Open an editor and enter the following text:
 
-This tutorial was verified against an Ubuntu 14.04.02 LTS system (YMMV on other versions/distros)
-Step 1: Ensure csmake, qemu-img and vbox-img are installed
-
-This exercise uses csmake and uses a csmake module that uses both qemu-img and vbox-img.  We use vbox-img, which is not readily available from a common apt repository, and a later version of qemu-img than what is readily available on ubuntu.  vobx-img reliably produces streamOptimized vmdk's, which works well for creating and importing ova's.  qemu-img v2.2 produces more correct qcow2 images and has the ability to produce newer qcows, but remain backwards compatible to 0.10.  qemu-img can also produce streamOptimized vmdk's, but does not do so in a manner that vmware products will accept from within an ova.
-
-If you do not have version 1.3.2 or later of csmake, please install that now
-
-You also need to install qemu-img and vbox-img:
-http://tabasco0.usa.hp.com/release/build_tools/qemu-img-2.2.0-1.0.deb
-http://tabasco0.usa.hp.com/release/build_tools/vbox-img-4.3.18-1.0.deb
-
-(If desired, you can build these completely from source.  See appendix below)
-Steps 2-4 (shortcut): Get the attached archive and expand it in "/path/to/my/ova-packager"
-
-(/path/to/my/ova-packager is any location you choose on your system to place the contents of the archive for the purpose of doing conversions)
-
-
-Download the tarball from here
-
-Expand the tarball in what we'll call in the rest of the tutorial /path/to/my/ova-packager
-
-(e.g.: mv ova-packager.tar.gz /path/to/my; cd /path/to/my; tar -xzvf ova-packager.tar.gz)
-
-Skip down to Step 5
-Step 2 (alternative): Create a conversion project (new directory location)
-
-Create a new directory to do the vmdk to ova conversions (path/to/my is assumed to be any path you choose on your build system to work with)
-mkdir /path/to/my/ova-packager
-cd /path/to/my/ova-packager
-mkdir CsmakeModules
-
-(Note: The project source is attached as a zip file on this wiki as well so you can use this out of the box.)
-Step 3 (alternative): Get the csmake modules used to do conversions
-
-The required modules are available directly from the cloudsystem-appliance-build project (where the csmake based CloudSystem builds are defined for all images)
-
-You can get the cloudsystem-appliance-build project and desired modules like this (with git installed on your system, /path/to/modules is where you've cloned or will clone cloudsystem-appliance-build):
-cd /path/to/modules
-git clone git://git.gozer.hpcloud.net/hp/cloudsystem-appliance-build
-cd cloudsystem-appliance-build/CsmakeModules
-cp ModifyVmdkDDB.py CreateOVA.py ConvertVirtualImage.py /path/to/my/ova-packager/CsmakeModules
-cd /path/to/my/ova-packager
-
-You can confirm you did this correctly by going back to the ova-packager directory and running "csmake --list-types --modules-path=+local"  The only modules you'll see documentation for are the modules you copied (ModifyVmdkDDB, CreateOVA, and ConvertVirtualImage) and the built-in, ~~phases~~ module.
-Step 4 (alternative): Create the csmakefile
-
-The csmakefile you create in this step will codify the process for using the modules you just brought over from cloudsystem-appliance-build.
-
-Because creating ova's is actually not that different from building other kinds of packaging, and because you will be using the file tracking features of csmake, it is required that you define some metadata that will be referenced by the ova packaging and used by csmake.  We will start by editing a fresh csmakefile.  Add the following to the csmakefile
-csmakefile Contents
-# The ~~phases~~ section defines that we will be using the "build" phase
-# It also documents what the build phase will do and defines that
-# by default, csmake will perform a build phase only
-[~~phases~~]
-build=Create the ova from a vmdk
-clean=Clean up ovas generated by a build
-**default=build
- 
-# This section defines the basic metadata that will be used
-# to generate the ova images.
-# This section also introduces the files that will be converted:
-#    By default, **files definitions will look in the source directory
-#                        by default, the source directory is the "pwd"
-[metadata@convert-ova-metadata]
-name=convert-ova-conversion
-version=8.5.0
-description=A convert-ova converted vmdk
-about=This image was converted using the convert-ova csmake build process
-packager=CloudSystem Development Team
-manufacturer=Hewlett-Packard
-**files=<vmdk (vmdk-image:generated-vm-disk)> *.vmdk
- 
-# This section will take anything that has a purpose of a "generated-vm-disk"
-# and translate it to a VMDK that can be used in an ova.
-# The 'ConvertVirtualImage' module's help can be accessed by:
-#    csmake --list-type=ConvertVirtualImage
-#    If you look at the help, you will see that the conversion implementation
-#    keys off of the *type* of the image specified in the **files (or other
-#    file tracking assigned type.
-# The particular **maps option used below is a little dangerous because it makes
-# assumptions about where the image resides and hazards doing an overwrite
-# of that file if the source image in the map resides in the same directory
-# as the target.  The convert won't work as an overwrite.
-# It also assumes that we're only converting vmdk's.
-# It would be safer to not assume these things and ensure we write the converted
-# image to a different location with a vmdk extension,
-# such as %(RESULTS)s/converted/{~~filename~~}.vmdk
-[ConvertVirtualImage@convert-vmdk]
-**maps=<(:generated-vm-disk)> -(1-1)-> <images (vmdk-image:appliance-disk)> {~~file~~}
- 
-# Here we see that we intentionally do an overwrite.
-# If you look at the documentation for this module, the module expects
-# to have an overwrite specified in the map.
-[ModifyVmdkDDB@modify-ddb]
-**maps=<(:appliance-disk)> -(1-1)-> {~~path~~}/{~~file~~}
-substitute_1=ddb.adapterType="ide"
-    ddb.adapterType="lsilogic"
-#Why 2147483647?  Because it works....
-#TODO: Find a more appropriate value if one exists
-append=ddb.toolsVersion="2147483647"
- 
- 
-# Here the mapping drops the ova in the "results" directory.
-# %(RESULTS)s represents the default directory for
-# the right hand side of the mapping.
-[CreateOVA@create-ova]
-**maps=<(:appliance-disk)> -(1-1)-> <(ova)> {~~filename~~}.ova
-vm-name=converted-vmdk-vm
-vm-description=A converted VMDK VM
-vm-cpus=4
-vm-memory=4096
-os=ubuntu64
-os-description=hLinux cattleprod
-disk-capacity-appliance-disk=200G
-disk-format-appliance-disk=VMDK Stream Optimized
+```
+[Shell@hello]
+command= echo "Hello, csmake!"
  
 [command@]
-00=convert-ova-metadata
-01=convert-vmdk
-02=modify-ddb, create-ova
+0000=hello
+```
 
-There appears to be quite a bit in this file, but let's break it down.  Before we do that, remember that you can always do: csmake --list-type=<section type>   (for example, csmake --list-type=command) to get documentation associated with that section.  The documentation for any section should explain what options the section wants and the syntax it expects for the options. 
-command and ~~phases~~ Sections
+Save this file as "csmakefile".  This defines a build that executes a shell script that echoes: Hello, csmake!.  See "Understanding the csmakefile" below.
 
-First, the "command" section.  We see it specifies several ids and an ordering for these ids.  "command" sections exist to invoke several steps as a single step (a simple functional abstraction), "command" sections can be accessed by id from the command line.  In this csmakefile, we've specified an "id-less" command implying it is the default (i.e., what is executed when csmake is invoked without a "--command") .  The "default" id will accomplish the same semantics.
+## Step 4: Execute csmake
+```
+csmake build
+```
 
-A "command" section is where the execution of a csmakefile will always start.
+You should see:
+```
+___  ______  ______  ______  ______  ______  ______  ______  ______  ___
+  __)(__  __)(__  __)(__  __)(__  __)(__  __)(__  __)(__  __)(__  __)(__
+ (______)(______)(______)(______)(______)(______)(______)(______)(______)
+     Begin csmake - version 1.3.1
+------------------------------------------------------------------
+` WARNING  : Phase 'build' not delcared in ~~phases~~ section
+` WARNING  :   Run: csmake --list-type=~~phases~~ for help
+       _   _   _   _   _   _   _   _   _   _   _   _   _   _   _   _
+    ,-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)
+    `-' `-' `-' `-' `-' `-' `-' `-' `-' `-' `-' `-' `-' `-' `-' `-'
+         BEGINNING PHASE: build
+__________________________________________________________________
+  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (
+------------------------------------------------------------------
++ command@      ---  Begin
+------------------------------------------------------------------
+__________________________________________________________________
+  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (
+------------------------------------------------------------------
+++ Shell@hello      ---  Begin
+------------------------------------------------------------------
+Hello, csmake!
+------------------------------------------------------------------
+ nununununununununununun   Step: Passed   nununununununununununun
+------------------------------------------------------------------
+++ Shell@hello      ---  End
+------------------------------------------------------------------
+__)__)__)__)__)__)__)__)__)__)__)__)__)__)__)__)__)__)__)__)__)__)
+------------------------------------------------------------------
+ nununununununununununun   Step: Passed   nununununununununununun
+------------------------------------------------------------------
++ command@      ---  End
+------------------------------------------------------------------
+__)__)__)__)__)__)__)__)__)__)__)__)__)__)__)__)__)__)__)__)__)__)
+         ENDING PHASE: build
+       _   _   _   _   _   _   _   _   _   _   _   _   _   _   _   _
+    ,-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)
+    `-' `-' `-' `-' `-' `-' `-' `-' `-' `-' `-' `-' `-' `-' `-' `-'
+` WARNING  : Phase 'build' not delcared in ~~phases~~ section
+` WARNING  :   Run: csmake --list-type=~~phases~~ for help
+   SEQUENCE EXECUTED: build
+------------------------------------------------------------------
+  .--.      .--.      .--.      .--.      .--.      .--.      .--.      .
+:::::.\::::::::.\::::::::.\::::::::.\::::::::.\::::::::.\::::::::.\::::::
+'      `--'      `--'      `--'      `--'      `--'      `--'      `--'
+     csmake: Passed
+------------------------------------------------------------------
+     End csmake - version 1.3.1
+------------------------------------------------------------------
+ ___  ______  ______  ______  ______  ______  ______  ______  ______  ___
+  __)(__  __)(__  __)(__  __)(__  __)(__  __)(__  __)(__  __)(__  __)(__
+ (______)(______)(______)(______)(______)(______)(______)(______)(______)
+```
 
-Another thing to note up front is the "~~phases~~" section.  As the comments say, it's there simply to provide guidance on how a build should proceed via documentation and provide defaults so that if csmake is invoked without phases, it will do what the user should expect.  In this case, if csmake is invoked without any phases specified, it will just do a build phase and stop.  In fact, we can conclude from this ~~phases~~ section that a build phase is the only valid phase to execute since it's the only phase documented in the section.  The information provided in the "~~phases~~" section may be accessed by doing: csmake --list-phases
+If you execute csmake with the --quiet option, like this:
+```
+csmake --quiet build
+```
 
-Now, back to the "command" section.  The ids in the command options are executed in order of the keys.  Here we have "00", "01", and "02" - these keys can be anything, for example "apple", "boat", and "car", just as long as it is understood that these keys will be consumed in lexicographic order.
-metadata Section
+Then you will see:
+```
+Hello, csmake!
+```
 
-The first id the "command" references is "convert-ova-metadata".  This is an id to our "metadata" section, and will do two things here.  The first is that it will set up the initial metadata for the build.  One of the goals of csmake is to allow a csmakefile to specify how to get from raw bits to a final, customer-consumable product.  "metadata" sections provide the glue for this concept that both defines what the build is trying to create, and the information that a resulting package from this build should have.  This "metadata" section also contains a **files option.  Any step in the build process can define a **files option, but it's good practice to call out as many of the source files as possible within the metadata section, in part because metadata is usually, if not always the first section to be executed for a build, but second, the sources for the build are really part of the makeup of the product definition - providing a good visual of both what you intend to build, and what files contribute to creating that build product.  If the **files definitions have relative paths, csmake will look in the working directory, which by default is the current working directory (pwd), but may be different if --working-dir is passed to csmake when it is invoked. 
+The `--quiet` option suppresses all csmake output.
 
-Here we see that **files in the "metadata" section introduce *.vmdk into the file- tracking as "<vmdk (vmdk-image:generated-vm-disk)>" which means that the files will be grouped under the "vmdk" id, are vmdk-image type files, and the purpose (or intent as it is referred to in the man pages for csmakefile) is to use these vmdk's as generated-vm-disk.  As you can see on future sections, these files may be referred to in a number of ways, just id, just file type, just intent, or just  filename or any combination of these. 
-ConvertVirtualImage Section
+### Tutorial 1 Appendix
 
-The next section in the "command" after "convert-ova-metadata" is: "convert-vmdk" which is a ConvertVirtualImage type of section.  The only option this section has is the "**maps" option - which tells csmake that we want to start with the files that are intended to be generated-vm-disks and we're going to map them to "<images (vmdk-image:appliance-disk)>", which means "grouped" as images, with the vmdk-image type and with the intent of use as appliance-disks.  The "{~~file~~}" just means we're mapping it to the same file and extension, but mappings, if the path is not otherwise defined, will map the file to the results or "target" directory.  The default results directory for csmake is "target" under the current working directory, this can be altered by passing a --results-dir flag to csmake. 
+This appendix is designed to help gain a finer understanding of the reasons why the above steps worked, and what you can do to get a better understanding of how csmake operates.
 
-NOTE: If you wanted to add other kinds of images  to be processed (e.g., qcow2s or raw images) into vmdk's and then on to be placed in the ova, you could add these to the **files option in the metadata and you would want to change the mapping in the "convert-vmdk" section to be "{~~filename~~}.vmdk" from just "{~~file~~}" so that they would have the correct extension, avoiding confusion.  For more details on how mapping works, the "~~file~~", etc. substitutions, and how ConvertVirtualImage understands how to convert images from the mapping information see:  man csmakefile (FILE MAPPING AND TRACKING section) and csmake --list-type=ConvertVirtualImage (from the ova-packager directory since we're using this module as a module local to the build).  ConvertVirtualImage uses both the "from" and "to" file types to determine what kind of conversion to do and which tool to use to do the conversion (as per the documentation)
-ModifyVmdkDDB Section
+#### Understanding the csmakefile
 
-Following the "convert-vmdk" id is the "modify-ddb" id, which is a ModifyVmdkDDB type of section.  Because vmdk's are large, the most efficient way to handle modifying the DDB section of a vmdk file is to do it in-place, so this section wants a mapping that will do such a modification in-place and will complain if it gets a mapping that isn't in-place.  Since the mapping is in-place and the file type and intent do not change, the "to" side of the mapping is simply "{~~path~~}/{~~file~~}" which tells csmake to use the exact same path, filename and extension as it gets in the "from" side of the mapping.  If, for some reason, it would be helpful to use a new grouping for these modified images, or provide a different intent, you could do this along with the "{~~path~~}/{~~file~~}" right hand side, e.g., "<modified-images (:fixedup-appliance-disk)> {~~path~~}/{~~file~~}".
+The csmakefile is a Python "INI" style file.  Just like with an INI file, a csmakefile has sections and key-value pairs for each section.
 
-On the left side of this mapping, we just specify "<(:appliance-disk)>" which tells csmake to map anything that is intended to be an appliance-disk.  This is really a bit too loosely defined in general, because ModifyVmdkDDB's only work with vmdk's, so "<(vmdk-image:appliance-disk)>" might be a better choice simply because it will help specify correct results as this project is maintained (if it were to be maintained).
+The csmakefile has a slightly more specific format than a regular "INI" file. For example, each section definition is of the form:
+```
+[<section type>@<id>]
+```
 
-As you can see from the options to this section, we're fixing up and appending different parts of the ddb.  The changes here will align the vmdk with what CloudSystem needs in these images in order to properly work in an ESX environment.  You can get more details on how this section works by doing csmake --list-type=ModifyVmdkDDB  in the ova-packager directory where you do your builds because we are using ModifyVmdkDDB as a module local to this build environment.
-CreateOVA Section
+The *\<section type\>* is implemented by a specific kind of python module that has been defined in a CsmakeModules directory (later tutorials will explore how CsmakeModules directories work).  The *\<id\>* is simply just a handle to allow you to distinguish between sections of identical type and for ease of reference.
 
-Finally, we get to the last step, creating an ova.  The very last id the "command" section calls for is "create-ova" which is defined as a CreateOVA section.  Here we see that we're taking anything that is intended to be an "appliance-disk" and mapping it into an ova with the same filename as the given appliance-disk, but with an .ova extension ({~~filename~~}.ova).  The same caution applies here as in the ModifyVmdkDDB section for the mapping, it would be more robust to map "vmdk-image:appliance-disk" just in case there are other types of appliance-disk's being tracked in the build.  The right side of the mapping (<(ova)> {~~filename~~}.ova) says we'll be creating files with an "ova" type, but same intent (which may not be entirely accurate since ova's are machine descriptions, not just disks), and same grouping id as the files mapped from the left side.
+Note that csmakefiles are declarative, that is, their purpose (like with SQL, for example) is simply to state what should happen.  Everything must fully declare what the build is expected to do.  There's no hidden behavior or special rules to shoehorn the tool into doing something special.  Everything in the specification has been defined as a module, including "control structure" sections such as "command" as seen above.
 
-The CreateOVA implementation will pull information from the metadata and its own options to fill out the information contained in the ova about the vm the ova describes.  You can read more about what "CreateOVA" does by doing, csmake --list-type=CreateOVA  from the ova-packager directory since we're using CreateOVA as a module local to the build.
-Step 5: Copy in a vmdk and run a build
+The key-value pairs provided under a given section are consumed by the section type module implementation.  These key-value pairs are extremely free-form, which makes it easy to express just about anything that is necessary to express in a csmakefile.  This, however, can also make csmakefiles feel unwieldy as it appears that the form, structure, and syntax of a csmakefile will ebb and flow from bash to python to expressions and syntax unique to individual sections whilst keeping with the "INI" type key-value basic syntax.
 
-Now you are ready to try to build an ova.
+In an INI file, a key must start in the first column, not contain spaces, and be followed by an '=' (equals) sign.  If any one of these conditions are not met, the line in the csmakefile specification will be part of the previous key.  For example:
+```
+[MySectionType@my]
+single_line=This is a value passed in for 'my'
+multi_line= This is
+ another=value
+ *   passed in
+ to the section 'my'
+```
+The single\_line result that the section implementation sees is literally "This is a value passed in for 'my'"
 
-First, copy one or more vmdk's into your ova-packager directory
+The multi\_line result that the section implementation sees is literally:
+```
+ "This is\nanother=value\n*   passed in\nto the section 'my'"
+```
+Notice first, that any leading and trailing white space for a multiline value is discarded.  There are times when the whitespace can be meaningful, so use of a delimiter like '\*' as seen above, is used to keep the left side spacing correct (putting a patch inline or, say, python code in a build specification may require the use of a left hand side delimiter to denote where the left hand side of the lines start and process the contents based on this as necessary.
 
-Then, run csmake
-cd /path/to/my/ova-packager
-cp /path/to/my/vmdks/*.vmdk .
-csmake
+As mentioned above, the syntax of the csmakefile itself is very regular and specific, but is also extremely flexible, allowing for bash scripts, next to simple string input, next to some python code.  Even though it may make a csmakefile confusing at first glance, this is one of the strengths of the tool: the ability to express and pull together all of the parts and processes of a complex build into a single specification.
 
-You should see the build go by and from the build directory, under target, you will find your ova's
-Tutorial 2 Appendix
-Building qemu-img and vbox-img From Sources
+Every section specified in the csmakefile has documentation associated with it that can be accessed using --list-type.  For example:
+```
+csmake --list-type=Shell
+```
 
-Both the qemu-img and vbox-img projects are subdirectories under cloudsystem-appliance-build.  So, first clone cloudsystem-appliance-build:
-git clone git://git.gozer.hpcloud.net/hp/cloudsystem-appliance-build
-cd cloudsystem-appliance-build
+will list the documentation for the "Shell" module.  You can also list all of the available types using "--list-types".  The documentation for the sections available from the current working directory will be output in (ASCII) alphabetical order, meaning capital lettered sections will be listed before lower case sections.  By convention, the "core" csmake sections should all start lowercase, thus listed at the end of the --list-types output.  Some examples of these special sections include: command, subcommand, include, metadata, and versioning.
 
-Before proceeding, make sure you have some basic tools installed, like a C++ compiler, etc.
-Building qemu-img
+An individual section type's documentation may be accessed using `--list-type`
 
-Change directories down into the qemu-img project and run csmake:
-cd packaged-deliverables/qemu-img
-csmake
-Building vbox-img
+Here's a full example of requesting the documentation for one of the most key modules, command:
 
-Change directories from cloudsystem-appliance-build down into vbox-img and run csmake:
-cd packaged-deliverables/vbox-img
-csmake
-Understanding what's going on here
+```
+$ csmake --list-type=command
 
-In both cases, you'll see csmake perform several build phases.  These default phases and the phases that are valid to use with these projects are defined in the csmakefile ~~phases~~ section for each project.
+___________________________________________________
+Section Type: command
+Path:         /usr/lib/python2.7/dist-packages/Csmake/CsmakeModules
+----Info----
+Library: csmake
+Purpose: Execute a series of build steps - the initial step is
+         a command seeded by the command line input (see --command)
+Phases: *any*
+Options: The keys are used to order the steps lexicographically
+       1, 10, 2, 20, 200, 3, A, a (suggestion use 00-99)
+       The values are atomic groups of steps
+          , - denotes step follows the next
+          & - denotes steps that can be run in parallel
+Example:
+    [command@build]
+    description = "This will build a small pond"
+    00 = init
+    01 = repo1 & repo2 & repo3, repo4
+    02 = createPond
+    03 = stockFish
+```
 
-The results for these builds will ultimately end up under the "target/debpackage" directory which will contain the resulting deb package you can use to install the tool.
+#### Understanding the csmake Command Line
 
-These are both good examples of getting from source, driving several build steps (even in another tool), and packaging the results for consumption because they are complex enough that they are not trivial, but not so complex that they are intractable to be understood by someone new to csmake's ins and outs.  Look at the csmakefiles, try the builds, try experimenting with the various phases involved.
+The basic csmake command line structure is:
+```
+csmake <flags> <phases>
+```
+
+where `<flags>` are the list of flags (use `--help` for a listing of possible flags) and `<phases>` is one or more build phases (which are specific to the csmakefile used, and if defined in the csmakefile explicitly, can be listed using `--list-phases`).
+
+##### The --command Flag
+
+The executed entry point for processing in csmake is defined using the
+`--command` flag.
+
+"command" sections in the csmakefile define which entrypoints are expected
+in a csmakefile.
+
+The default command in a csmakefile when the command flag is omitted from
+the command line is:
+
+```
+[command@]
+```
+
+If an id-less command section is not found, the next target is:
+
+```
+[command@default]
+```
+
+If this is also not defined, csmake will take a command section of its choosing
+and execute that section (this is not suggested practice).
+
+The goal should be for the csmakefile developer to have the default command
+do what your developer would expect to be the most helpful thing.
+
+All available commands may be listed by using the `--list-commands` flag on the command line.  Here's an example from a very complex csmakefile:
+
+```
+$ csmake --list-commands
+ 
+================= Defined commands =================
+    local - Setup a local build - must be used with an appliance build
+e.g., --command=local, base-foundation
+    jenkins - Setup a jenkins build - must be used with an appliance build
+e.g., --command=jenkins, base-foundation
+    rc - Setup an rc build - must be used with an appliance build
+    pr - Setup a partner release build - must be used with an appliance build
+    base-mgmt - Create a first phase base image for the management appliance
+    base-foundation - Create a first phase base image for the foundation appliance
+    base-enterprise - Create a first phase base image for the enterprise appliance
+    partner-enterprise - Create a second (partner) phase image for the enterprise appliance
+    base-swift - Create a first phase base image for the swift appliance
+    base-monasca - Create a first phase base image for the monasca appliance
+    base-update - Create a first phase base image for the update appliance
+    base-sdn - Create a first phase base image for the sdn appliance
+    mgmt - Create a management appliance from a base management image
+    foundation - Create a foundation appliance from a base foundation image
+    enterprise - Create a enterprise appliance from a base enterprise image
+    swift - Create a swift appliance from a base swift image
+    monasca - Create a monasca appliance from a base monasca image
+    update - Create an update appliance from a base swift image
+    sdn - Create an sdn appliance from a base swift image
+    local-base-mgmt - (Local) Create a first phase base image for the management appliance
+    local-base-foundation - (Local) Create a first phase base image for the foundation appliance
+    local-base-enterprise - (Local) Create a first phase base image for the enterprise appliance
+    local-partner-enterprise - (Local) Create a second (partner) phase image for the enterprise appliance
+    local-base-swift - (Local) Create a first phase base image for the swift appliance
+    local-base-monasca - (Local) Create a first phase base image for the monasca appliance
+    local-base-update - (Local) Create a first phase base image for the update appliance
+    local-base-sdn - (Local) Create a first phase base image for the sdn appliance
+    local-mgmt - (Local) Create a management appliance from a base management image
+    local-foundation - (Local) Create a foundation appliance from a base foundation image
+    local-enterprise - (Local) Create a enterprise appliance from a base enterprise image
+    local-swift - (Local) Create a swift appliance from a base swift image
+    local-monasca - (Local) Create a monasca appliance from a base monasca image
+    local-update - (Local) Create a update appliance from a base update image
+    local-sdn - (Local) Create a sdn appliance from a base sdn image
+============= Suggested Multicommands ==============
+    local, <appliance>: builds a local build of the appliance
+    jenkins, <appliance>: does a jenkins build of the appliance
+    rc, <appliance>: does an rc versioned build of the appliance
+    pr, rc, <appliance>: does a partner release release candidate
+    pr, <appliance>: does a final partner release
+    <appliance>: does a final release
+```
+
+The documentation associated with the commands are provided from the
+`command` sections' "description" options, e.g.:
+
+```
+[command@local-swift]
+description=(Local) Create a swift appliance from a base swift image
+```
+
+###### Multicommands
+
+Multicommands are a way to launch several sections in a single execution.
+The syntax for launching a multicommand is the same that you would use when
+writing a line in a "command" section in a csmakefile.
+
+For example, you might say:
+```
+$ csmake --command "local-swift & local-monasca & local-update"
+```
+
+And csmake would start doing all three commands in parallel
+
+Multicommands are especially helpful for complex builds when most of each of
+the builds are the same.  For example, above, you see various multicommands
+suggested that have prefixes that help define the final purpose of the build.
+
+Practices may differ on how this is used, but some suggestions include:
+* A prefix command that specifies the build is a pre-release
+* A prefix command that defines one of several environments for a build
+* A postfix command that defines which backend to store a build to
+
+Essentially, use of a multicommand is preferred to using branching (which isn't
+provided in csmake) or shell environment variables to define how a build
+should operate.  Obviously, there are times when use of shell environment
+variables can be useful if well documented, but this should be avoided whenever
+possible to make each build self-contained.
+
+#### Build Phases
+
+Phases are used to control the actions or set of actions each module will take
+based on what is called out in the csmakefile.  When a phase is specified on
+the csmake command line, csmake will dispatch that message to the
+implementation of every build section from the `--command` specified in 
+csmake.
+
+So, for example:
+* `csmake build` will tell csmake to send the `build`
+message to every section's implementation evaluated from the csmakefile's
+default command. 
+* `csmake clean` would send "clean" to every section implementation.
+* `csmake clean build` would send "clean" to every section specified in the
+default command, followed by sending "build" to the same sections.
+
+Optionally, a csmakefile may contain a `[~~phases~~]` section which is a
+built in csmake module.  The documentation for the section may be obtained
+in the standard way described above: `csmake --list-type=~~phases~~`.  
+
+This will provide a short description of all the valid phases (as explicitly
+defined in the `~~phases~~` section, anticipated combinations of phases and
+descriptions of what they do, the default sequence of phases (the phases csmake
+will perform if no phases are listed on the command line), and any suggested
+ multicommands.  The information contained in the `~~phases~~` section can be
+accessed from the command line using `--list-phases`.
+
+Here is an example:
+
+```
+$ csmake --list-phases
+ 
+=================== Valid Phases ===================
+clean_build: Cleans just the build directory for the given appliance build
+build: Builds an appliance based on the given command(s)
+clean: Cleans all build artifacts from the given command
+clean_results: Cleans the given appliance build and results directories
+=============== Valid Phase Sequences ==============
+clean_results -> build:  Generates a clean build of an appliance
+clean_results -> build -> clean_build:  Keeps only the results
+Default sequence: clean_results -> build -> clean_build
+   (Executed when phase(s) not given on command line)
+============= Suggested Multicommands ==============
+    local, <appliance>: builds a local build of the appliance
+    jenkins, <appliance>: does a jenkins build of the appliance
+    rc, <appliance>: does an rc versioned build of the appliance
+    pr, rc, <appliance>: does a partner release release candidate
+    pr, <appliance>: does a final partner release
+    <appliance>: does a final release
+```
+
+#### --help Flag and Friends
+
+Several of the flags provide help:
+
+* `--help` - brief synopsis flags available for use with csmake
+* `--help --verbose` - full command line flag help
+* `--list-type=<module type>` - provides help for a single section module type
+* `--list-types` - provides the help for all available section module types
+* `--list-commands` - provides a list of valid commands and multicommands
+* `--list-phases` - provides a list of:
+   - valid phases
+   - combinations of phases
+   - the default combination of phases
+   - and multicommands
+                (if provided by a ~~phases~~ section)
+* `--help-all` - will dump all available information
+
+#### Output Verbosity Flags
+
+Some of the flags provide control over how much output csmake will provide. 
+
+By default, csmake will provide all its visual cues and any WARNINGs, ERRORs, and EXCEPTIONs (and CRITICALs as well) that a build produces. 
+
+Here is a list of the flags that will help control levels of output:
+
+* `--verbose` - will also allow "INFO" output.
+* `--debug` - will also allow "INFO" and "DEBUG" output.
+   - This will also turn on any stack traces produced from a failed build or exception.
+* `--quiet` - Turn off all visual cues, Turn off all WARNING and ERROR messages.
+* `--dev-output` - will turn on very verbose output that describes the
+                   specific workflow csmake is executing
+   - This operates independently of --quiet, --verbose, and --debug
+* `--no-chatter` - Turns off banner decorations
+* `--log` - will send the csmake output to the path specified for --log.
+
+The rest of the flags are used to control various aspects of the execution flow of csmake itself and are used less often in the course of doing everyday builds with csmake.  The documentation for these flags can be found by invoking `--help`.
 
 <sub>This material is under the GPL v3 license:
 

@@ -150,6 +150,10 @@ CSMAKE_SETTINGS={
            the phase used.""",
        False,
        "Specifies the phase(s) to run"],
+    "file-tracking": [
+        False,
+        """Tells csmake to output filetracking information (a lot of data)""",
+        True ],
     "verbose": [
         False,
         """Tells csmake to be verbose""",

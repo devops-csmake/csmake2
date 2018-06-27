@@ -36,6 +36,7 @@ class Result:
         self.settings = env.settings
         self.loglevel=Result.LOG_WARNING
         self.devoutput = self.settings['dev-output']
+        self.filetrack = self.settings['file-tracking']
         if self.settings['debug']:
             self.loglevel=Result.LOG_DEBUG
         elif self.settings['verbose']:
@@ -411,3 +412,7 @@ __________________________________________________________________
     def devdebug(self, output, *params):
         if self.devoutput:
             self.log("^%^%^ DEV", output, *params)
+
+    def filetrackerOut(self, output, *params):
+        if self.filetrack:
+            self.log("||| FILETRACKER", output, *params)
