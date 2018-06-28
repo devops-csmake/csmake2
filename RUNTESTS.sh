@@ -250,6 +250,19 @@ dotest-fail test-TestPython-coverage test-TestPython.csmake show-bad-coverage te
 dotest-fail test-TestPython-file-coverage test-TestPython.csmake show-bad-file-coverage test
 dotest-fail test-TestPython-insufficient test-TestPython.csmake show-unsufficient test
 
+#Test **phases
+dotest-cmp test-phase-shift test.csmake test-phase-shift build "phase: special"
+dotest-cmp test-phase-unshifted test.csmake test-phase-shift special "phase: special"
+dotest-cmp test-another-phase-shift test.csmake test-another-phase-shift xyzzy "phase: build"
+dotest-cmp test-phase-shift-with-aspects test.csmake test-phase-shift-with-aspects build "phase: aspect, start
+phase: special
+phase: aspect, passed
+phase: aspect, end"
+dotest-cmp test-phase-shift-with-aspects-section test.csmake test-phase-shift-with-aspects aspect "phase: aspect, start
+phase: build
+phase: aspect, passed
+phase: aspect, end"
+
 #####################################
 # Testing footer
 echo ""

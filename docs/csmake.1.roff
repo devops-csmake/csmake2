@@ -1,4 +1,6 @@
 .\"# <copyright>
+.\"# (c) Copyright 2018 Jeremiah S. Patterson
+.\"# (c) Copyright 2018 Cardinal Peak Technologies
 .\"# (c) Copyright 2017 Hewlett Packard Enterprise Development LP
 .\"#
 .\"# This program is free software: you can redistribute it and/or modify it
@@ -19,7 +21,7 @@
 .\" groff -man -Tascii csmake.1.roff
 .\"
 
-.TH csmake 1 "DECEMBER 2016" "HPE Helion" "User Manuals"
+.TH csmake 1 "JUNE 2018" "devops-csmake" "User Manuals"
 .SH NAME
 csmake - A specification-based build scripting tool
          (completely specified make)
@@ -103,6 +105,7 @@ a listing of ABuildStep.py and AnotherBuildStep.py.
 --csmakefile: Synonym for --makefile
 --debug: Tells csmake to log build debugging information
 --dev-output: Tells the script to output csmake/module developer output
+--file-tracking: Tells csmake to output filetracking information
 --help: Displays the short help text and usage
 --help-all: Show *all* help - very, very verbose
 --help-long: Displays the long help text and usage
@@ -170,6 +173,8 @@ a listing of ABuildStep.py and AnotherBuildStep.py.
     Tells csmake to log build debugging information
 --dev-output : 
     Tells the script to output csmake/module developer output
+--file-tracking : 
+    Tells csmake to output filetracking information
 --help : 
     Displays the short help text and usage
 --help-all : 
@@ -433,6 +438,27 @@ Here, when the aspect's woven section is executed and fails, the "failed"
 method in the aspect module will be called regardless of the current phase,
 but if the section passes, the "passed__build" method will only be called
 if executing a build phase.
+
+.SH PHASE SHIFTING (**phases)
+
+A section can shift a phase to make that section's implementation conform
+to the build's phase structure, when it doesn't.
+
+.EX
+[MySection@a-phase-shifter]
+**phases=build->_, clean->build
+aflag=Information
+.EE
+
+.P
+This shifts the build phase for the "a-phase-shifter" section to a phase
+called '_', which should never actually be an implemented phase and is
+typically used in python to indictate "don't care" or "ignore", for example.
+
+.P
+The section also, confusingly, shifts the clean phase to the build phase,
+so when the clean phase is executed, when csmake reaches this section,
+it will attempt to do the build phase just for this section instead.
 
 .SH ASPECTS and JOINPOINT and FLOW CONTROL ADVICE
 
