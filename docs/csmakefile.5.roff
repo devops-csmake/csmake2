@@ -1,4 +1,5 @@
 .\"# <copyright>
+.\"# (c) Copyright 2018 Jeremiah S. Patterson
 .\"# (c) Copyright 2017 Hewlett Packard Enterprise Development LP
 .\"#
 .\"# This program is free software: you can redistribute it and/or modify it
@@ -18,7 +19,7 @@
 .\" Process this file with
 .\" groff -man -Tascii csmakefile.5.roff
 .\"
-.TH csmakefile 5 "DECEMBER 2016" "HPE Helion" "User Manuals"
+.TH csmakefile 5 "JUNE 2018" "devops-csmake" "User Manuals"
 .SH NAME
 csmakefile - A specification-file for building with csmake
 
@@ -156,6 +157,42 @@ Example:
          csmake-swak
          n81
 .EE
+
+.SH REMAPPING PHASES (**phases)
+
+In the csmakefile, a section can be mapped, or rerouted, to different phases
+than what the module was programmed to respond to.  This can be helpful
+when mixing modules from varying libraries in unexpected, new ways.
+
+.P
+Use of the **phases key in a section should be considered a quick workaround.
+There are more elegant ways to remap phases, such as, subclassing a module
+and declaring the phases that the module should actually handle.
+
+.P
+How does it work? 
+
+.P
+Say a module exists that agressively cleans up on a clean phase
+but the agressive clean up is only wanted on a clean_all phase.  The section
+may be remapped from the clean to the clean all phase using the **phases
+key in the section.  Here is an example:
+
+.P
+.EX
+[MyCleaner@the-clean-step]
+**phases=clean->_, clean_all->clean
+directory=%(TARGET)s/mystuff
+.EE
+
+.P
+This section would be ignored in the "clean" phase, and route the clean_all
+phase to the "MyCleaner" module's implementation of the clean phase handler.
+
+.P
+Note that this only applies to the section, not any subsections executed as
+a result of executing that section, returned results go to the
+acutal executed phase results (not the mapped name).
 
 .SH STANDARD MODULES (a.k.a. Section Types)
 

@@ -617,10 +617,11 @@ class CliDriver(object):
                 joinpoint,
                 repr(aspect))
             method = None
+            actualPhase = aspect._lookupPhaseShift(phase, aspectdict)
             try:
                 method = aspect._joinPointLookup(
                     joinpoint,
-                    phase,
+                    actualPhase,
                     aspectdict )
             except:
                 aspect.log.exception("Attempt to lookup joinpoint failed")
@@ -789,8 +790,10 @@ class CliDriver(object):
                 execinstance._absorbNewMappedFiles()
                 return execinstance
             method = None
+            actualPhase = execinstance._lookupPhaseShift(phase, stepdict)
+            self.log.devdebug("Actual phase to use for lookup: %s", actualPhase)
             try:
-                method = getattr(execinstance, phase)
+                method = getattr(execinstance, actualPhase)
             except:
                 try:
                     method = getattr(execinstance, "default")

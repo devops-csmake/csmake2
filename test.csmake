@@ -121,3 +121,30 @@ description=Test parallel
 [command@nested-parallel]
 description=Test nested parallel
 00=parallel & parallel & parallel
+
+#------ Testing phase shifting -----
+[command@test-phase-shift]
+description=Test the phase shift **phases keys (build->special)
+00=test-phases
+
+[command@test-another-phase-shift]
+description=Test the phase shift **phases keys (xyzzy->build, special->build)
+00=test-another
+
+[command@test-phase-shift-with-aspects]
+description=Test aspect phase shifting
+00=test-with-aspect
+
+[Phase@test-phases]
+**phases=build->special
+
+[Phase@test-another]
+**phases=xyzzy->build
+         special->build
+
+[&PhaseAspect@test-with-aspect]
+**phases=build->aspect
+[Phase@test-with-aspect]
+**phases=build->special
+         aspect->build
+
