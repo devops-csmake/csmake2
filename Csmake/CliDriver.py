@@ -51,13 +51,6 @@ CSMAKE_LIBRARY_VERSION = "1.10.1"
 #TODO: Nested settings and settings processing needs to be migrated to
 #      Settings.py and fixed to be more generic
 
-#TODO: It may be handy to include a way to push "environment" from the
-#      command line like cpp and make -D FOO=BAR ... not sure I want to do that
-#      This would potentially compromise the "completely specified" aspect
-#      of the tool.  This can be done with shell environment (which is what
-#      would happen anyway) and a module that mapped shell environment
-#      into csmake environment.
-
 #TODO: We need to refactor this into cli stuff and csmake stuff
 
 class CliDriver(object):
