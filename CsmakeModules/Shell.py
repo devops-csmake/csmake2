@@ -164,6 +164,21 @@ class Shell(CsmakeModuleAllPhase):
                         self.log.exception(
                             "Processing environment %s failed",
                             ref )
+
+        #Grock any prefix and suffix requirements for bash functions
+        bash_func_prefix="BASH_FUNC_"
+        bash_func_suffix="%%"
+        try:
+            defresult = subprocess.check_output(
+                "foo(){ echo t; }; export -f foo; env | grep foo",
+                executable='/bin/bash',
+                shell=True)
+            parts = defresult.split('foo')
+            bash_func_prefix = parts[0]
+            bash_func_suffix = parts[1].split('=')[0]
+        except Exception as e:
+            self.log.warning("_froms and _tos may not work properly: %s", str(e))
+
         #Add in the ability to access the mappings from the shell
         mappingenv = []
         if self.mapping is not None:
@@ -171,9 +186,9 @@ class Shell(CsmakeModuleAllPhase):
                 mappingenv.append("%s;;%s" % (',,'.join(froms),',,'.join(tos)))
         newenv.update({
             '_MAPPING' : ' '.join(mappingenv),
-            'BASH_FUNC__froms%%':
+            '{}_froms{}'.format(bash_func_prefix,bash_func_suffix):
                  '() { aaa=(${1//\;\;/ }\n); echo ${aaa[0]//,,/ }\n}',
-            'BASH_FUNC__tos%%':
+            '{}_tos{}'.format(bash_func_prefix,bash_func_suffix):
                  '() { aaa=(${1//\;\;/ }\n); echo ${aaa[1]//,,/ }\n}'
             })
         return newenv
