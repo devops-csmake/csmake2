@@ -64,8 +64,8 @@ class ParallelLaunchStack:
 
     def __getitem__(self, key):
         #TODO: Implement general lookup
-        if key >= 0:
-            raise ValueError("General index lookup not implemented yet")
+        #if key >= 0:
+        #    raise ValueError("General index lookup not implemented yet")
         thread = threading.currentThread()
         stack = self._getCurrentStack(thread)
         if stack is None:

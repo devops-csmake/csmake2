@@ -410,7 +410,8 @@ class FileManager:
             if 'relLocation' in specdict:
                 del specdict['relLocation']
             return
-        if location[0] == '/' or location.startswith('{~~path~~}'):
+        if location[0] == '/' or location.startswith('{~~path~~}') \
+                              or location.startswith('[~~path~~]'):
             relpath = os.path.relpath(location, basepath)
             if relpath.startswith('..'):
                 relpath = location
@@ -437,7 +438,8 @@ class FileManager:
             if 'relLocation' in specdict:
                 del specdict['relLocation']
             return
-        if location[0] == '/' or location.startswith('{~~path~~}'):
+        if location[0] == '/' or location.startswith('{~~path~~}') \
+                              or location.startswith('[~~path~~]'):
             if 'relLocation' in specdict:
                 del specdict['relLocation']
             specdict['location'] = location
@@ -525,7 +527,9 @@ class FileManager:
             '\g<star%d>' )
         keywords = FileManager.FILE_AXES
         for key in keywords:
-            result = result.replace('{~~%s~~}' % key, '\g<%s>' % key)
+            result = result.replace('{~~', '[~~')
+            result = result.replace('~~}', '~~]')
+            result = result.replace('[~~%s~~]' % key, '\g<%s>' % key)
         return result
 
     @staticmethod
@@ -937,6 +941,7 @@ class FileManager:
             return
         froms = instanceList
         tos = [spec.index for spec in toSpecs]
+        self._fromManyMapSubstitutions(froms, toSpecs)
         result.addMapping(froms,tos)
         self.log.devdebug("Calculated mapping: %s -(*-*)-> %s", str(froms), str(tos))
 
@@ -959,9 +964,19 @@ class FileManager:
                 self.results,
                 actualLocation,
                 newinstanceSpec )
+        self.log.devdebug("newinstanceSpec: %s", str(newinstanceSpec))
+        for axis, value in newinstanceSpec.iteritems():
+            if value is None:
+                continue
+            #print axis, value, newinstanceSpec
+            newinstanceSpec['location'] = re.sub(r'\[~~%s~~\]' % axis, value, newinstanceSpec['location'])
+            toSpec.index['location'] = newinstanceSpec['location']
+            newinstanceSpec['relLocation'] = re.sub(r'\[~~%s~~\]' % axis, value, newinstanceSpec['relLocation'])
+            toSpec.index['relLocation'] = newinstanceSpec['relLocation']
+        self.log.devdebug("newinstancespec: ", str(newinstanceSpec))
         return newinstanceSpec
 
-    def _deriveResultFileFromSource(self, instance, fromSpec, toSpec):
+    def _determineMatchingLocationFromSource(self, instance, fromSpec, toSpec):
         sourcere = fromSpec.getSourceLocationRE()
         instanceAxis = 'location'
         resultre = toSpec.getResultLocationRE()
@@ -974,6 +989,10 @@ class FileManager:
             instanceAxis = 'relLocation'
             resultre = toSpec.getResultRelLocationRE()
         self.log.devdebug("Matching: %s", sourcere)
+        return (sourcere, resultre, instanceAxis)
+
+    def _deriveResultFileFromSource(self, instance, fromSpec, toSpec):
+        sourcere, resultre, instanceAxis = self._determineMatchingLocationFromSource(instance, fromSpec, toSpec)
         matcher = re.match(sourcere, instance.index[instanceAxis])
         if matcher is None:
             self.log.error(
@@ -1076,12 +1095,55 @@ class FileManager:
                 result.addMapping([instance], newinstanceSpecs)
                 self.log.devdebug("Calculated Mapping: %s -(1-*)-> %s", str(instance), str(newinstanceSpecs))
 
+    def _fromManyMapSubstitutions(self, froms, tos):
+        specCollection = {}
+        thunkTo = tos[0]
+        for afrom in froms:
+            sourcere, _, axis = self._determineMatchingLocationFromSource(afrom, afrom, thunkTo)
+            matcher = re.match(sourcere, afrom.index[axis])
+            if matcher is not None:
+                index = { k: v for k, v in matcher.groupdict().iteritems() if v is not None }
+            else:
+                index = {}
+            index.update(afrom.index)
+            for key, value in index.iteritems():
+                if key not in specCollection:
+                    specCollection[key] = value
+                if specCollection[key] != value:
+                    specCollection[key] = [value, specCollection[key]]
+        for ato in tos:
+            for key, value in ato.index.iteritems():
+                if '[~~' in value:
+                    continue
+                if key not in specCollection:
+                    specCollection[key] = value
+                if specCollection[key] != value or type(value) is list:
+                    specCollection[key] = value
+                else:
+                    specCollection[key] = {'values': [value, specCollection[key]]}
+        for ato in tos:
+            for locKey in ['location', 'relLocation']:
+                if locKey in ato.index:
+                    if '{~~' in ato.index[locKey]:
+                        self.log.error("Depricated substitution syntax {~~<key>~~} used and not supported: %s", str(ato))
+                        raise ValueError("Depricated substitution")
+                    for key, value in specCollection.iteritems():
+                        if '[~~%s~~]' % key in ato.index[locKey]:
+                            if type(value) is list or type(value) is dict:
+                                self.log.error("Indeterminate substitution (%s): %s", key, str(ato))
+                                raise ValueError("Indeterminate substitution")
+                            ato.index[locKey] = re.sub(r'\[~~%s~~\]' % key, value, ato.index[locKey])
+                    if '[~~' in ato.index[locKey]:
+                        self.log.error("Unresolved substitution: %s", str(ato))
+                        raise ValueError("Unresolved substitution")
+
     def mapFilesManyToOne(self, fromSpecs, toSpecs, result):
         instanceList = []
         for spec in fromSpecs:
             instanceList.extend(self.findInstances(spec))
         if len(instanceList) == 0:
             return
+        
         for toSpec in toSpecs:
             #TODO: What deriviation should there be?
             #      IDs?  There needs to be some way to
@@ -1089,6 +1151,7 @@ class FileManager:
             #      all the specified IDs....hmmm
             #      could be an exercise for when we take the
             #      result back in
+            self._fromManyMapSubstitutions(instanceList, [toSpec])
             result.addMapping(instanceList, [toSpec.index])
             self.log.devdebug("Calculated Mapping: %s -(*-1)-> %s", str(instanceList), str(toSpec.index))
 

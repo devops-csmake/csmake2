@@ -528,7 +528,7 @@ Examples:
     in the test and build phases:
 
     [Shell@my-mapped-command]
-    **maps=<my-files> -(1-1)-> %(APATH)s/{~~filename~~}.newer
+    **maps=<my-files> -(1-1)-> %(APATH)s/[~~filename~~].newer
     command(test, build) = for x in $_MAPPING
        do
            for from in $(_froms $x)
@@ -871,9 +871,6 @@ Phases:
 Options:
     map_<mapkey> -
         map: a file mapping (as in **maps)
-             **NOTE: Be sure to escape any right curly braces '}'
-                     That are not marking mapped path names,
-                     e.g., {~~file~~}
         [copyright: <copyright-id>]
             should refer to a copyright specification in the makefile
             if not included, the metadata's copyright will be used.
@@ -889,7 +886,7 @@ Options:
 
         For example:
             path_root=INSTALL_ROOT
-            map_mymap=map: <bin> -(1-1)-> {INSTALL_ROOT}/bin/{~~file~~}
+            map_mymap=map: <bin> -(1-1)-> {INSTALL_ROOT}/bin/[~~file~~]
 
         A Packager would key off of the "root" part to define its
         understanding of what 'root' means.  INSTALL_ROOT would
@@ -1305,10 +1302,10 @@ For example a complex mapping might look like:
 
 .EX
   <class (mytype:class-a)> *-a.my, <class (mytype:class-b)> *-b.my
-              -(*-1)-> <class> topclasses/{~~file~~}
+              -(*-1)-> <class> topclasses/[~~file~~]
   && <class (mytype:class-c)> *-c.my
-              -(*-1)-> <class> bottomclasses/{~~file~~},
-                       <others> track/{~~filename~~}-track.my
+              -(*-1)-> <class> bottomclasses/[~~file~~],
+                       <others> track/[~~filename~~]-track.my
 .EE
 
 .P
@@ -1431,19 +1428,14 @@ avoid calling out specific files, or paths...in other words to make it
 easier to specify mapping behavior.
 
 .EX
-  {~~file~~} - the entire file name, so 'blah.xy' for example.
-  {~~filename~~} - the file name without an extension,
+  [~~file~~] - the entire file name, so 'blah.xy' for example.
+  [~~filename~~] - the file name without an extension,
                    'blah' for 'blah.xy'
-  {~~ext~~} - the extension for a file, 'xy', for 'blah.xy'
-  {~~path~~} - the path leading up to the file
-
-  ///
-  Future work should consider other useful monikers, ~~id~~,
-  and other type axes, possible for example,
-  ~~version~~, etc.  User defined - not sure what that
-  would look like, since environment variables and file
-  matching can already be used.
-  ///
+  [~~ext~~] - the extension for a file, 'xy', for 'blah.xy'
+  [~~path~~] - the path leading up to the file
+  [~~id~~] - the id 'bucket' axis of the result
+  [~~type~~] - the file type axis of the result
+  [~~intent~~] - the intent axis of the result
 .EE
 
 Use of these special symbols on the right of a mapping
@@ -1489,7 +1481,7 @@ All the files in auxillary/* would be added to the 'aux' group.
 In the next section, let's assume we encounter (maybe it's a c compiler section):
 
 .EX
-  **maps=<(c)> -(1-1)-> <(ELF-object)> intermediates/{~~filename~~}.o
+  **maps=<(c)> -(1-1)-> <(ELF-object)> intermediates/[~~filename~~].o
 .EE
 
 This would map anything that's identified as a c type file, to a .o
@@ -1508,7 +1500,7 @@ python files identified as intended for 'source-library':
 
 .EX
   **maps=<(python:source-library)> -(1-1)->
-              <(python-object:dev-library)> bin/{~~filename~~}.pyo
+              <(python-object:dev-library)> bin/[~~filename~~].pyo
 .EE
 
 Here, again the pyo's will all end up back in the same id group, and *only*
@@ -1553,10 +1545,10 @@ purposes of this example, we're going to stick to using the decorations.
 So, say we wanted to map things into a package.  That might look like:
 
 .EX
-**maps=<(:library)> -(1-1)-> package/usr/lib/{~~file~~}
+**maps=<(:library)> -(1-1)-> package/usr/lib/[~~file~~]
        && <(:dev-library)> -(1-1)->
-               package/usr/lib/dev/project/{~~path~~}/{~~file~~}
-       && <(:scripts)> -(1-1)-> package/usr/bin/{~~file~~}
+               package/usr/lib/dev/project/[~~path~~]/[~~file~~]
+       && <(:scripts)> -(1-1)-> package/usr/bin/[~~file~~]
        && <(erlang)> -(1-1)-> package/usr/lib/erlang
 .EE
 
@@ -1634,14 +1626,6 @@ right, such as \\1 or \\3 or \\g<1>. See:
 
 .EX
     https://docs.python.org/2/library/re.html
-.EE
-
-.EX
-Note for FUTURE WORK:
-For the :dev-library map for the packaging in the example,
-it would be nice to use {~~rel-path~~} to
-be able to structure the results directory and then move that structure
-to the packaging ... include directory structuring for example.
 .EE
 
 .SH ASPECTS

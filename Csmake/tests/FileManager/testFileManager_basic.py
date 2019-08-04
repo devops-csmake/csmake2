@@ -110,7 +110,7 @@ class testFileManager_basic(unittest.TestCase):
     def test_oneToOneWithPathFile(self):
         cut = self._createaCUT()
         result = cut.parseFileDeclaration("<myid (test:testing)> test_*.ext")
-        result = cut.parseFileMap("<myid> -(1-1)-> {~~path~~}/{~~file~~}")
+        result = cut.parseFileMap("<myid> -(1-1)-> [~~path~~]/[~~file~~]")
         self.assertEqual(len(result), 5)
         for froms, tos in result.iterfiles():
             self.assertEqual(
@@ -121,7 +121,7 @@ class testFileManager_basic(unittest.TestCase):
     def test_specialRECharacters(self):
         cut = self._createaCUT()
         result = cut.parseFileDeclaration("<myid (test:testing)> *.special")
-        result = cut.parseFileMap("<myid> -(1-1)-> {~~path~~}/{~~file~~}")
+        result = cut.parseFileMap("<myid> -(1-1)-> [~~path~~]/[~~file~~]")
         self.assertEqual(len(result), 2)
         for froms, tos in result.iterfiles():
             self.assertEqual(
@@ -132,7 +132,7 @@ class testFileManager_basic(unittest.TestCase):
     def test_specialRECharactersInPath(self):
         cut = self._createaCUT()
         result = cut.parseFileDeclaration("<myid (test:testing)> dir+ectory/*.special")
-        result = cut.parseFileMap("<myid> -(1-1)-> {~~path~~}/{~~file~~}")
+        result = cut.parseFileMap("<myid> -(1-1)-> [~~path~~]/[~~file~~]")
         self.assertEqual(len(result), 2)
         for froms, tos in result.iterfiles():
             #With a path specified in the directory for a file instance,
@@ -147,7 +147,7 @@ class testFileManager_basic(unittest.TestCase):
     def test_absPathWithNoFromSpec(self):
         cut = self._createaCUT()
         result = cut.parseFileDeclaration("<myid (test:testing)> test_*.ext")
-        result = cut.parseFileMap("<myid> -(1-1)-> %s" % self.working + "/{~~file~~}")
+        result = cut.parseFileMap("<myid> -(1-1)-> %s" % self.working + "/[~~file~~]")
         self.assertEqual(len(result), 5)
         for froms, tos in result.iterfiles():
             self.assertEqual(
@@ -158,7 +158,7 @@ class testFileManager_basic(unittest.TestCase):
     def test_mapSanityWithFutureSubstitution(self):
         cut = self._createaCUT()
         result = cut.parseFileDeclaration("<myid (test:testing)> test_*.ext")
-        result = cut.parseFileMap("<myid> -(1-1)-> {blah}/this/that/{~~file~~}")
+        result = cut.parseFileMap("<myid> -(1-1)-> {blah}/this/that/[~~file~~]")
         self.assertEqual(len(result), 5)
         for froms, tos in result.iterspecs():
             path, filename = os.path.split(froms[0]['location'])
@@ -173,10 +173,70 @@ class testFileManager_basic(unittest.TestCase):
             self.assertEqual(len(froms), 8)
             self.assertEqual(len(tos), 1)
 
+    def test_basicManyToOneFileMapWithSubstitution(self):
+        cut = self._createaCUT()
+        result = cut.addFileDeclaration("<myid(test:testing)> *.ext")
+        result = cut.parseFileMap("*.ext -(*-1)-> [~~id~~].mine")
+        self.assertEqual(len(result), 1)
+        for froms, tos in result.iterspecs():
+            self.assertEqual(len(froms), 8)
+            self.assertEqual(len(tos), 1)
+            self.assertEqual(tos[0]['relLocation'], 'myid.mine')
+
+    def test_unresolvableAndResolvableManyToManySubstitution(self):
+        cut = self._createaCUT()
+        result = cut.addFileDeclaration("<myid (test:testing)> test_*.ext")
+        result = cut.addFileDeclaration("<otherid (other:testing)> other_*.ext")
+        with self.assertRaises(ValueError):
+            result = cut.parseFileMap("*.ext -(*-*)-> [~~id~~].mine")
+        result = cut.parseFileMap("*.ext -(*-*)-> [~~intent~~].mine, a.out")
+        for froms, tos in result.iterspecs():
+            self.assertEqual(len(froms), 8)
+            self.assertEqual(len(tos), 2)
+            found = False
+            for ato in tos:
+                if 'mine' in ato['relLocation']:
+                    found = True
+                    self.assertEqual(ato['relLocation'], 'testing.mine')
+            self.assertTrue(found)
+        self.assertEqual(result.getMappingSpecification(), '*-*')
+        #Test string rep of FileMapper
+        str(cut)
+
+    def test_reFileDeclaration(self):
+        cut = self._createaCUT()
+        result = cut.addFileDeclaration("<myid (test:testing)> ~~test_[^.1][.]ext")
+        result = cut.parseFileMap("*.ext -(*-1)-> [~~id~~].result")
+        for froms, tos in result.iterspecs():
+            self.assertEqual(len(froms),4)
+            self.assertEqual(len(tos),1)
+            for afrom in froms:
+                self.assertNotEqual('test_1.ext', afrom['relLocation'])
+
+    def test_idSubstitutionOneToOne(self):
+        cut = self._createaCUT()
+        result = cut.addFileDeclaration("<myid (test:testing)> test_*.ext")
+        result = cut.addFileDeclaration("<otherid (other:testing)> other_*.ext")
+        result = cut.parseFileMap("*.ext -(1-1)-> [~~id~~]_[~~file~~].mine, [~~type~~].type")
+        self.assertEqual(len(result), 16)
+        for froms, tos in result.iterspecs():
+            self.assertEqual(len(froms), 1)
+            self.assertEqual(len(tos), 1)
+            if froms[0]['relLocation'].startswith('test_'):
+                if tos[0]['relLocation'].endswith('.type'):
+                    self.assertEqual(tos[0]['relLocation'], 'test.type')
+                else:
+                    self.assertEqual(tos[0]['relLocation'], 'myid_%s.mine' % froms[0]['relLocation'])
+            else:
+                if tos[0]['relLocation'].endswith('.type'):
+                    self.assertEqual(tos[0]['relLocation'], 'other.type')
+                else:
+                    self.assertEqual(tos[0]['relLocation'], 'otherid_%s.mine' % froms[0]['relLocation'])
+
     def test_basicFileAbsorb(self):
         cut = self._createaCUT()
         result = cut.addFileDeclaration("<myid(test:testing)> *.ext")
-        result = cut.parseFileMap("test_*.ext -(1-1)-> test{~~file~~}.out")
+        result = cut.parseFileMap("test_*.ext -(1-1)-> test[~~file~~].out")
         self.assertEqual(len(result), 5)
         for froms, tos in result.iterfiles():
             self.assertEqual(len(froms), 1)
@@ -196,7 +256,7 @@ class testFileManager_basic(unittest.TestCase):
     def test_TwoFileAbsorbsWithSameId(self):
         cut = self._createaCUT()
         result = cut.addFileDeclaration("<myid(test:testing)> *.ext")
-        result = cut.parseFileMap("<(test)> -(1-1)-> <myid(another:mytest)> test{~~file~~}.out")
+        result = cut.parseFileMap("<(test)> -(1-1)-> <myid(another:mytest)> test[~~file~~].out")
         self.assertEqual(len(result), 8)
         for froms, tos in result.iterfiles():
             self.assertEqual(len(froms), 1)
@@ -212,7 +272,7 @@ class testFileManager_basic(unittest.TestCase):
             for instance in instances:
                 match = re.match(r'(testtest_[1-5][.]ext[.]out)|(testother_[1-3][.]ext[.]out)', instance.index['relLocation'])
                 self.assertTrue(match is not None)
-        result = cut.parseFileMap("<(another:mytest)> -(1-1)-> <(final)> {~~filename~~}.final")
+        result = cut.parseFileMap("<(another:mytest)> -(1-1)-> <(final)> [~~filename~~].final")
         self.assertEqual(len(result),8)
         for froms, tos in result.iterfiles():
             path, tofilename = os.path.split(tos[0])
@@ -234,7 +294,7 @@ class testFileManager_basic(unittest.TestCase):
     def test_basicFileAbsorbDeleting(self):
         cut = self._createaCUT()
         result = cut.addFileDeclaration("<myid(test:testing)> *.ext")
-        result = cut.parseFileMap("test_*.ext -(1-1)-> test{~~file~~}.nex")
+        result = cut.parseFileMap("test_*.ext -(1-1)-> test[~~file~~].nex")
         self.assertEqual(len(result), 5)
         for froms, tos in result.iterfiles():
             self.assertEqual(len(froms), 1)
@@ -254,7 +314,7 @@ class testFileManager_basic(unittest.TestCase):
     def test_basicFileAbsorbSkipVerification(self):
         cut = self._createaCUT()
         result = cut.addFileDeclaration("<myid(test:testing)> *.ext")
-        result = cut.parseFileMap("test_*.ext -(1-1)-> test{~~file~~}.blah")
+        result = cut.parseFileMap("test_*.ext -(1-1)-> test[~~file~~].blah")
         self.assertEqual(len(result), 5)
         for froms, tos in result.iterfiles():
             self.assertEqual(len(froms), 1)
@@ -276,7 +336,7 @@ class testFileManager_basic(unittest.TestCase):
         result = cut.addFileDeclaration("<myid (content:file)> test_1.ext")
         result = cut.addFileDeclaration("<myid (missing:file)> missing_1.ext")
         result = cut.addFileDeclaration("<myid (content:another)> test_2.ext")
-        result = cut.parseFileMap("<(missing:file)> -(1-1)-> {~~file~~}")
+        result = cut.parseFileMap("<(missing:file)> -(1-1)-> [~~file~~]")
         self.assertEqual(len(result),0)
 
     def test_manyToOneFileAbsorb(self):
@@ -415,5 +475,5 @@ class testFileManager_basic(unittest.TestCase):
         self.assertEqual(result, r'(?P<file>(?P<filename>(?P<star1>[^/]*))[.](?P<ext>ext))')
 
     def test_translateStarsToResultRegex(self):
-        result = FileManager.translateStarsToResultRegex('file{~~file~~}.mine')
+        result = FileManager.translateStarsToResultRegex('file[~~file~~].mine')
         self.assertEqual(result, r'file\g<file>.mine')

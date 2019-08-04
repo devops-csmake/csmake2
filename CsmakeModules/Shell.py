@@ -91,7 +91,7 @@ class Shell(CsmakeModuleAllPhase):
            in the test and build phases:
 
            [Shell@my-mapped-command]
-           **maps=<my-files> -(1-1)-> %(APATH)s/{~~filename~~}.newer
+           **maps=<my-files> -(1-1)-> %(APATH)s/[~~filename~~].newer
            command(test, build) = for x in $_MAPPING
               do
                   for from in $(_froms $x)

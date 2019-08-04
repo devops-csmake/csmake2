@@ -36,7 +36,7 @@ name=t
 version=1.0.0
 
 [Shell@echo-py-files]
-**maps=<code> -(1-1)-> {~~path~~}/{~~file~~}
+**maps=<code> -(1-1)-> [~~path~~]/[~~file~~]
 command=for x in $_MAPPING
     do
         MYFILE="$(_froms $x)"

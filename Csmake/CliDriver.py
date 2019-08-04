@@ -75,6 +75,7 @@ class CliDriver(object):
         self.launchStack = ParallelLaunchStack()
         self.launchStack.append(self)
         self.results = []
+        self.stackDumps = []
         self.buildspecLock = threading.Lock()
         self.buildspec = ConfigParser.RawConfigParser()
         self.buildspec.optionxform = str
@@ -87,7 +88,8 @@ class CliDriver(object):
         self.ttou_handler = signal.signal(signal.SIGTTOU, signal.SIG_IGN)
         tty = None
         try:
-            tty = os.open('/dev/tty', os.O_RDWR)
+            #tty = os.open('/dev/tty', os.O_RDWR)
+            tty = os.open(os.ctermid(), os.O_RDWR)
             os.tcsetpgrp(tty, os.getpgrp())
         except OSError:
             self.log.info("There is no tty to manipulate")
@@ -860,6 +862,11 @@ class CliDriver(object):
                     execinstance,
                     stepdict)
             finally:
+                lastStackResult = None
+                if len(self.stackDumps):
+                    lastStackResult = self.stackDumps[-1][1]
+                if resultObject is not None and resultObject.params['status'] == "Failed" and not resultObject.isChild(lastStackResult):
+                    self.stackDumps.append((list(self.launchStack), resultObject, phase))
                 if pushedModule:
                     if self.launchStack[-1] is not execinstance:
                         self.log.error("DEVERROR: Launch stack not pointing to current launch")
@@ -1202,6 +1209,7 @@ class CliDriver(object):
 
         #TODO: do a build summary
 
+        self.log.dumpStacks(self.stackDumps)
         self.log.chatStatus()
         self.log.chatEnd()
 
