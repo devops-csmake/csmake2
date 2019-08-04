@@ -45,9 +45,6 @@ class installmap(CsmakeModuleAllPhase):
        Options:
            map_<mapkey> -
                map: a file mapping (as in **maps)
-                    **NOTE: Be sure to escape any right curly braces '}'
-                            That are not marking mapped path names,
-                            e.g., {~~file~~}
                [copyright: <copyright-id>]
                    should refer to a copyright specification in the makefile
                    if not included, the metadata's copyright will be used.
@@ -63,7 +60,7 @@ class installmap(CsmakeModuleAllPhase):
 
                For example:
                    path_root=INSTALL_ROOT
-                   map_mymap=map: <bin> -(1-1)-> {INSTALL_ROOT}/bin/{~~file~~}
+                   map_mymap=map: <bin> -(1-1)-> {INSTALL_ROOT}/bin/[~~file~~]
 
                A Packager would key off of the "root" part to define its
                understanding of what 'root' means.  INSTALL_ROOT would

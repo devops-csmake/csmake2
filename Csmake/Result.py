@@ -30,6 +30,7 @@ class Result:
 
     def __init__(self, env, resultInfo={}):
         self.nesting = 0
+        self.failures = []
         self.childResults = []
         self.resultType='Step'
         self.env = env
@@ -66,6 +67,13 @@ class Result:
         self.FAIL_BANNER= ".:*~*:._.:*~*:._.:*~*:."
         self.SKIP_BANNER= "- - - - - - - - - - - -"
         self.UNEX_BANNER= "                       "
+        self.DUMP_STACKS_SEPARATOR="------------------------------------------------------------------------------\n"
+        self.DUMP_STACK_SEPARATOR="""____________________________________________________________________________
+----------------------------------------------------------------------------
+"""
+
+        self.DUMP_STACK_LAST_OUTPUT_SEPARATOR="- - - - - - - - --- Fail Output --- - - - - - - - - -\n"
+        self.DUMP_STACK_STACK_SEPARATOR=      "- - - - - - - - --- Stack Dump --- - - - - - - - - -\n"
         self.STATUS_FORMAT=" {1}   {2}: {3}   {1}\n"
         self.ANNOUNCE_FORMAT="{0} {1}@{2}      ---  {3}\n" 
         self.ONEXIT_ANNOUNCE_FORMAT="  /   {3} - Exit Handler: {0}@{1}  {2}\n"
@@ -187,6 +195,16 @@ __________________________________________________________________
         self.outstream.write(output)
         if self.outstream is not self.params['Out']:
             self.params['Out'].write(output)
+
+    def isChild(self, other):
+        if self is other:
+            return False
+        if other in self.childResults:
+            return True
+        for child in self.childResults:
+            if child.isChild(other):
+                return True
+        return False
 
     def __repr__(self):
         reprResult = ['<<RESULT>> %s:%s: %s' % (
@@ -312,6 +330,28 @@ __________________________________________________________________
                     self.params['Type'],
                     self.params['Id'],
                     "End" ))
+
+    def dumpStacks(self, stacks):
+        if len(stacks) and self.loglevel:
+            self.write('\n')
+            self.write(self.DUMP_STACKS_SEPARATOR)
+            self.write("--- The following failures have occurred (get details from the output above):\n")
+            self.write(self.DUMP_STACKS_SEPARATOR)
+            for stack, result, phase in stacks:
+                self.write(self.DUMP_STACK_SEPARATOR)
+                if result:
+                    self.write(self.DUMP_STACK_LAST_OUTPUT_SEPARATOR)
+                    result.repeatOutput(self.out())
+                self.write(self.DUMP_STACK_STACK_SEPARATOR)
+                self.write("--- In Phase: %s\n" % phase)
+                for item in stack:
+                    if item.__class__.__name__ == "CliDriver":
+                        continue
+                    if hasattr(item, "actualId"):
+                        self.write("%s@%s\n" % (item.__class__.__name__, item.actualId) )
+                    else:
+                        self.write("%s\n" % item.__class__.__name__)
+            self.write(self.DUMP_STACK_SEPARATOR)
 
     def repeatOutput(self, fobj, nesting=0):
         if not self.loglevel:
