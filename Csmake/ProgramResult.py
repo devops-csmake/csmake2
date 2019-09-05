@@ -1,4 +1,5 @@
 # <copyright>
+# (c) Copyright 2019 Autumn Samantha Jeremiah Patterson
 # (c) Copyright 2017 Hewlett Packard Enterprise Development LP
 #
 # This program is free software: you can redistribute it and/or modify it
@@ -16,39 +17,19 @@
 # </copyright>
 from Result import Result
 from phases import phases
+from Reporter import ProgramReporter, NonChattyProgramReporter
 
 class ProgramResult(Result):
 
     def __init__(self, env, version, resultInfo={}):
         Result.__init__(self, env, resultInfo)
-        self.OBJECT_HEADER="""
- ___  ______  ______  ______  ______  ______  ______  ______  ______  ___
-  __)(__  __)(__  __)(__  __)(__  __)(__  __)(__  __)(__  __)(__  __)(__
- (______)(______)(______)(______)(______)(______)(______)(______)(______)
-"""
-        self.OBJECT_FOOTER=self.OBJECT_HEADER
-        self.PASS_BANNER="""
-  .--.      .--.      .--.      .--.      .--.      .--.      .--.      .
-:::::.\\::::::::.\\::::::::.\\::::::::.\\::::::::.\\::::::::.\\::::::::.\\::::::
-'      `--'      `--'      `--'      `--'      `--'      `--'      `--'
-"""
-        self.FAIL_BANNER="""
-  __   __   __   __   __   __   __   __   __   __   __   __   __   __   __
- _\/_ _\/_ _\/_ _\/_ _\/_ _\/_ _\/_ _\/_ _\/_ _\/_ _\/_ _\/_ _\/_ _\/_ _\/_
- \/\/ \/\/ \/\/ \/\/ \/\/ \/\/ \/\/ \/\/ \/\/ \/\/ \/\/ \/\/ \/\/ \/\/ \/\/
-"""
-        self.STATUS_FORMAT="""{1}
-     {2}: {3}
-"""
-        self.ANNOUNCE_FORMAT="""
-     {3} csmake - version %s
-""" % version
-        self.resultType="csmake"
+        if self.chatter:
+            self.reporter = ProgramReporter(version, self.params['Out'])
+        else:
+            self.reporter = NonChattyProgramReporter(version, self.params['Out'])
 
-        self.PHASE_BANNER="""       _   _   _   _   _   _   _   _   _   _   _   _   _   _   _   _
-    ,-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)
-    `-' `-' `-' `-' `-' `-' `-' `-' `-' `-' `-' `-' `-' `-' `-' `-'
-"""
+    def setupTee(self):
+        pass
 
     def log(self, level, output, *params):
         #print "XXX Output: %s" % output
@@ -65,26 +46,17 @@ class ProgramResult(Result):
 
     def chatStartPhase(self, phase, doc=None):
         if self.loglevel:
-            if self.chatter:
-                self.write(self.PHASE_BANNER)
-            self.write("         BEGINNING PHASE: %s\n" % phase)
-            if doc is not None:
-                self.write("             %s\n" % doc)
+            self.reporter.startPhase(phase, doc)
 
     def chatEndPhase(self, phase, doc=None):
         if self.loglevel:
-            self.write("\n         ENDING PHASE: %s\n" % phase)
-            if doc is not None:
-                self.write("             %s\n" % doc)
+            self.reporter.endPhase(phase, doc)
 
     def chatEndLastPhaseBanner(self):
-        if self.loglevel and self.chatter:
-            self.write(self.PHASE_BANNER)
+        if self.loglevel:
+            self.reporter.endLastPhase()
 
     def chatEndSequence(self, sequence, doc=None):
         if self.loglevel:
             if len(sequence) > 0:
-                self.write("\n   SEQUENCE EXECUTED: %s\n" % phases.joinSequence(
-                                                                sequence) )
-                if doc is not None:
-                    self.write("     %s\n" % doc)
+                self.reporter.endSequence(sequence, doc)

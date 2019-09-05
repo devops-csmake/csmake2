@@ -1,4 +1,5 @@
 # <copyright>
+# (c) Copytight 2019 Autumn Samantha Jeremiah Patterson
 # (c) Copyright 2017 Hewlett Packard Enterprise Development LP
 #
 # This program is free software: you can redistribute it and/or modify it
@@ -14,10 +15,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # </copyright>
+import atexit
 import traceback
 import imp
 import pkgutil
 import types
+import time
 from os import environ
 from sys import stdout, stderr
 import sys
@@ -43,8 +46,10 @@ from AspectResult import AspectResult
 from AspectFlowControl import AspectFlowControl
 from ParallelLaunchStack import ParallelLaunchStack
 from MetadataManager import DefaultMetadataModule
+from OutputTee import OutputTee
 import phases
 
+atexit.register(OutputTee.endAll)
 
 CSMAKE_LIBRARY_VERSION = "1.10.1"
 
@@ -68,6 +73,10 @@ class CliDriver(object):
             self.__class__.__name__))
         #Patch this up until the result is created
         self.log.devdebug = self.log.debug
+        self.log.startResult = lambda: 1
+        self.log.endResult = lambda: 1
+        self.log.endAll = lambda: 1
+        self.log.finished = lambda: 1
         self.cwd = environ['PWD']
         self.oldcwd = self.cwd
         sys.meta_path.append(self)
@@ -463,6 +472,8 @@ class CliDriver(object):
                 sys.exit(2)
         else:
             self.logfile = sys.stdout
+        OutputTee.subsumeStream(self.logfile)
+        self.logfile = OutputTee
         self.log = ProgramResult(self.environment, self.scriptVersion, {'Out' : self.logfile })
         self.log.setTargetModule(self)
 
@@ -642,6 +653,7 @@ class CliDriver(object):
             self.log.debug("No joinpoints were defined: %s", joinpoint)
         else:
             execinstance.log.chatEndJoinPoint()
+        aspect.log.finished()
         execinstance.log.devdebug("Completed %s on aspects", joinpoint)
         return joinpointsImplemented
 
@@ -866,7 +878,11 @@ class CliDriver(object):
                 if len(self.stackDumps):
                     lastStackResult = self.stackDumps[-1][1]
                 if resultObject is not None and resultObject.params['status'] == "Failed" and not resultObject.isChild(lastStackResult):
-                    self.stackDumps.append((list(self.launchStack), resultObject, phase))
+                    parent, stack = self.launchStack._getCurrentStack(threading.currentThread())
+                    while parent is not None:
+                        parent, pstack = self.launchStack._getCurrentStack(parent)
+                        stack = pstack + stack
+                    self.stackDumps.append((stack, resultObject, phase))
                 if pushedModule:
                     if self.launchStack[-1] is not execinstance:
                         self.log.error("DEVERROR: Launch stack not pointing to current launch")
@@ -883,6 +899,7 @@ class CliDriver(object):
                     resultObject.chatEnd()
                 self.log.devdebug(" Step Completed: %s" % section)
                 self.log.devdebug("-----------------------------------------")
+                resultObject.finished()
 
     def includeBuildspec(self, spec):
         if not os.path.isfile(spec):
@@ -934,8 +951,10 @@ class CliDriver(object):
             elif returncode != 0:
                 self.log.error("XXX Execution of csmake failed")
                 returncode = 1
+            self.log.finished()
             signal.signal(signal.SIGTTOU, self.ttou_handler)
             os.system('stty sane')
+            OutputTee.endAll()
         sys.exit(returncode)
 
     def realmain(self):
@@ -1206,8 +1225,6 @@ class CliDriver(object):
                 "Replay file could not be written: (%s) %s",
                 e.__class__.__name__,
                 str(e))
-
-        #TODO: do a build summary
 
         self.log.dumpStacks(self.stackDumps)
         self.log.chatStatus()

@@ -1,4 +1,5 @@
 # <copyright>
+# (c) Copyright 2019 Autumn Samantha Jeremiah Patterson
 # (c) Copyright 2017 Hewlett Packard Enterprise Development LP
 #
 # This program is free software: you can redistribute it and/or modify it
@@ -14,11 +15,18 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # </copyright>
-import StringIO
-import pickle
-import sys
 import json
+import os.path
+import pickle
+import StringIO
+import sys
+import tempfile
+import threading
+import time
 import traceback
+import OutputTee
+
+from Reporter import Reporter, NonChattyReporter
 
 class Result:
 
@@ -27,6 +35,7 @@ class Result:
     LOG_WARNING=200
     LOG_ERROR=100
     LOG_QUIET=0
+    OUTPUT_HEADER="%s  %%s  %s\n" % ('-'*15, '-'*15)
 
     def __init__(self, env, resultInfo={}):
         self.nesting = 0
@@ -50,67 +59,20 @@ class Result:
             self.params['status'] = "Unexecuted"
         if 'exception' not in self.params:
             self.params['exception'] = False
-        self.outstream = StringIO.StringIO()
         if 'Out' not in self.params:
             self.params['Out'] = sys.stdout
+        self.actualout = self.params['Out']
         if 'Err' not in self.params:
             self.params['Err'] = self.params['Out']
         if 'Type' not in self.params:
             self.params['Type'] = '<<Type Unset>>'
         if 'Id' not in self.params:
             self.params['Id'] = '<<Step Id Unset>>'
-
-        self.NESTNOTE='+'
-
-        self.OUTPUT_HEADER="%s  %%s  %s\n" % ('-'*15, '-'*15)
-        self.PASS_BANNER= "nununununununununununun"
-        self.FAIL_BANNER= ".:*~*:._.:*~*:._.:*~*:."
-        self.SKIP_BANNER= "- - - - - - - - - - - -"
-        self.UNEX_BANNER= "                       "
-        self.DUMP_STACKS_SEPARATOR="------------------------------------------------------------------------------\n"
-        self.DUMP_STACK_SEPARATOR="""____________________________________________________________________________
-----------------------------------------------------------------------------
-"""
-
-        self.DUMP_STACK_LAST_OUTPUT_SEPARATOR="- - - - - - - - --- Fail Output --- - - - - - - - - -\n"
-        self.DUMP_STACK_STACK_SEPARATOR=      "- - - - - - - - --- Stack Dump --- - - - - - - - - -\n"
-        self.STATUS_FORMAT=" {1}   {2}: {3}   {1}\n"
-        self.ANNOUNCE_FORMAT="{0} {1}@{2}      ---  {3}\n" 
-        self.ONEXIT_ANNOUNCE_FORMAT="  /   {3} - Exit Handler: {0}@{1}  {2}\n"
-
-        self.OBJECT_HEADER= \
-"""
-__________________________________________________________________
-  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (  (
-------------------------------------------------------------------"""
-        self.OBJECT_FOOTER= \
-"""__)__)__)__)__)__)__)__)__)__)__)__)__)__)__)__)__)__)__)__)__)__)
-
-
-
-"""
-        self.ONEXIT_HEADER= \
-"""
-   ......................................................................
-"""
-        self.ONEXIT_FOOTER= \
-""" ````````````````````````````````````````````````````````````````````````
-
-"""
-
-        self.ASPECT_JOINPOINT_HEADER="""
-    ___________________________________________________
-    \  Begin Joinpoint: %s    
-     ```````````````````````````````````````````````````
-"""
-        self.ASPECT_JOINPOINT_FOOTER="""
-     __________________________________________________
-    /  End Joinpoint: %s
-    ``````````````````````````````````````````````````
-"""
-        self.STATUS_SEPARATOR="%s\n" % ("-" * 66)
-        self.ONEXIT_BEGIN_SEPARATOR=" %s\n" % ("`" *72)
-        self.ONEXIT_END_SEPARATOR="   %s\n" % ("." * 70)
+        if self.chatter:
+            self.reporter = Reporter(self.params['Out'])
+        else:
+            self.reporter = NonChattyReporter(self.params['Out'])
+        OutputTee.OutputTee.startResult(self)
 
     def setTargetModule(self, targetModule):
         self.params['targetModule'] = targetModule
@@ -178,6 +140,12 @@ __________________________________________________________________
     def executing(self):
         self.params['status'] = 'Executing'
 
+    def finished(self):
+        try:
+            OutputTee.OutputTee.endResult(self)
+        except:
+            pass
+
     def err(self):
         result = self.params['Err']
         result.flush()
@@ -192,6 +160,8 @@ __________________________________________________________________
         self.childResults.append(child)
 
     def write(self, output):
+        self.params['Out'].write(output)
+        return None
         self.outstream.write(output)
         if self.outstream is not self.params['Out']:
             self.params['Out'].write(output)
@@ -214,8 +184,8 @@ __________________________________________________________________
 
         if self.params['status'] == 'Passed' or self.params['status'] == 'Failed':
            reprResult.append(Result.OUTPUT_HEADER % 'Step Output')
-           reprResult.append(self.outstream.getvalue())
-        return ''.join(reprResult)
+           #reprResult.append(self.getvalue())
+        return '\n'.join(reprResult)
 
     def __str__(self):
         return self.__repr__()
@@ -224,62 +194,32 @@ __________________________________________________________________
         self.nesting = nesting
         if self.loglevel:
             self.out() #Hack to flush
-            if self.chatter:
-                self.write(self.OBJECT_HEADER)
-                self.write('\n')
-                #TODO: revise all the chats to use a dict with format
-                #       and to have an overridable format string
-                # E.g., {key:s} the dict should be the params + ephemeral data
-                self.write(self.ANNOUNCE_FORMAT.format(
-                    self.NESTNOTE * self.nesting,
-                    self.params['Type'],
-                    self.params['Id'],
-                    "Begin" ))
-                self.write(self.STATUS_SEPARATOR)
-            else:
-                self.write(self.ANNOUNCE_FORMAT.format(
-                    self.NESTNOTE * self.nesting,
-                    self.params['Type'],
-                    self.params['Id'],
-                    "Begin" ))
+            self.reporter.start(
+                self.params,
+                self.nesting )
 
     def chatStartOnExitCallback(self, name):
-        if self.loglevel and self.chatter:
+        if self.loglevel:
             self.out()
-            self.write(self.ONEXIT_HEADER)
-            self.write(self.ONEXIT_ANNOUNCE_FORMAT.format(
-                self.params['Type'],
-                self.params["Id"],
-                name,
-                "Begin" ))
-            self.write(self.ONEXIT_BEGIN_SEPARATOR)
+            self.reporter.startOnExitCallback(name)
 
     def chatStartJoinPoint(self, joinpoint):
         self.currentjoinpoint = joinpoint
-        if self.loglevel and self.chatter:
+        if self.loglevel:
             self.out() #Hack to flush
-            self.write(self.ASPECT_JOINPOINT_HEADER % joinpoint)
-            self.write('\n')
+            self.reporter.startJoinPoint(self.currentjoinpoint)
 
     def chatEndJoinPoint(self):
         joinpoint = self.currentjoinpoint
         self.currentjoinpoint = None
-        if self.loglevel and self.chatter:
+        if self.loglevel:
             self.out() #Hack to flush
-            self.write('\n')
-            self.write(self.ASPECT_JOINPOINT_FOOTER % joinpoint)
-            self.write('\n')
+            self.reporter.endJoinPoint(self.currentjoinpoint)
 
     def chatEndOnExitCallback(self, name):
         if self.loglevel and self.chatter:
             self.out()
-            self.write(self.ONEXIT_END_SEPARATOR)
-            self.write(self.ONEXIT_ANNOUNCE_FORMAT.format(
-                self.params['Type'],
-                self.params["Id"],
-                name,
-                "End" ))
-            self.write(self.ONEXIT_FOOTER)
+            self.endOnExitCallback(name, self.params)
 
     def chat(self, output, cr=True):
         if self.loglevel:
@@ -291,59 +231,27 @@ __________________________________________________________________
     def chatStatus(self):
         if self.loglevel:
             self.out() #Hack to flush
-            if self.chatter:
-                self.write('\n')
-                self.write(self.STATUS_SEPARATOR)
-                if self.params['status'] == 'Passed':
-                    statusBanner=self.PASS_BANNER
-                elif self.params['status'] == 'Failed':
-                    statusBanner=self.FAIL_BANNER
-                elif self.params['status'] == 'Skipped':
-                    statusBanner=self.SKIP_BANNER
-                else:
-                    statusBanner=self.UNEX_BANNER
-                self.write(self.STATUS_FORMAT.format(
-                    self.NESTNOTE * self.nesting,
-                    statusBanner,
-                    self.resultType,
-                    self.params['status']) )
-            else:
-                self.write('\n%s Step Status: %s\n' % (
-                    self.NESTNOTE * self.nesting,
-                    self.params['status'] ) )
+            self.reporter.status(
+                self.params,
+                self.resultType,
+                self.nesting)
 
     def chatEnd(self):
         if self.loglevel:
             self.out() #Hack to flush
-            if self.chatter:
-                self.write(self.STATUS_SEPARATOR)
-                self.write(self.ANNOUNCE_FORMAT.format(
-                    self.NESTNOTE * self.nesting,
-                    self.params['Type'],
-                    self.params['Id'],
-                    "End" ))
-                self.write(self.STATUS_SEPARATOR)
-                self.write(self.OBJECT_FOOTER)
-            else:
-                self.write(self.ANNOUNCE_FORMAT.format(
-                    self.NESTNOTE * self.nesting,
-                    self.params['Type'],
-                    self.params['Id'],
-                    "End" ))
+            self.reporter.end(self.params, self.nesting)
 
+    ####HERE:
+    ####    Need to rewrite this, check params for calls to self.reporter
+    ###     check defs in reporter
+    ###     bring in the fifo tee
+    ###     add parameters to make the output XML as well
+    ###       define XSLT to XHTML with suggested css
     def dumpStacks(self, stacks):
         if len(stacks) and self.loglevel:
-            self.write('\n')
-            self.write(self.DUMP_STACKS_SEPARATOR)
-            self.write("--- The following failures have occurred (get details from the output above):\n")
-            self.write(self.DUMP_STACKS_SEPARATOR)
+            self.reporter.startStackDumpSection()
             for stack, result, phase in stacks:
-                self.write(self.DUMP_STACK_SEPARATOR)
-                if result:
-                    self.write(self.DUMP_STACK_LAST_OUTPUT_SEPARATOR)
-                    result.repeatOutput(self.out())
-                self.write(self.DUMP_STACK_STACK_SEPARATOR)
-                self.write("--- In Phase: %s\n" % phase)
+                self.reporter.startStackDump(phase)
                 for item in stack:
                     if item.__class__.__name__ == "CliDriver":
                         continue
@@ -351,9 +259,19 @@ __________________________________________________________________
                         self.write("%s@%s\n" % (item.__class__.__name__, item.actualId) )
                     else:
                         self.write("%s\n" % item.__class__.__name__)
-            self.write(self.DUMP_STACK_SEPARATOR)
+                if result:
+                    self.reporter.startLastOutput()
+                    result.repeatOutput(self.out())
+            self.reporter.endStackDumpSection()
 
     def repeatOutput(self, fobj, nesting=0):
+        try:
+            actualResult = OutputTee.OutputTee.getResult(self)
+            if actualResult is not None:
+                fobj.write(actualResult)
+        except:
+            self.exception("Failed to get output")
+        return None
         if not self.loglevel:
             fobj.write(self.OBJECT_HEADER)
             fobj.write("%s %s@%s               Begin\n" %(

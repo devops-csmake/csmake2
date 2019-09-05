@@ -18,6 +18,7 @@ import unittest
 import CsmakeModule
 from Environment import Environment
 from Result import Result
+from OutputTee import OutputTee
 #from FileManager import FileSpec
 #from FileManager import FileInstance
 import os.path
@@ -55,3 +56,5 @@ class testCsmakeModule_basic(unittest.TestCase):
 
         p = cut._parseBrackets("{{test}{{this}",{'test':'a', 'this':'b'})
         self.assertEqual("{a{b",p)
+
+        OutputTee.endAll()
