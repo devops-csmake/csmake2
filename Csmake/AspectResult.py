@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # </copyright>
 from Result import Result
+from Reporter import AspectReporter, NonChattyReporter
 
 class AspectResult(Result):
 
@@ -24,24 +25,12 @@ class AspectResult(Result):
             self.params['cuts'] = '<<Cut Type Unset>>'
         if 'AspectId' not in self.params:
             self.params['AspectId'] = '<<No Aspect Id>>'
-        self.PASS_BANNER="      ~~~~~~      "
-        self.FAIL_BANNER="      ######      "
-        self.NESTNODE="      &"
         self.nesting=1
         self.resultType='Aspect'
-        self.OBJECT_HEADER="""       _________________________________________
-      |--               Aspect                --|
-       \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
-        ``````````````````````````````````````````"""
-
-        self.STATUS_SEPARATOR="        ------------------------------------------\n"
-        self.OBJECT_FOOTER="""        _________________________________________
-       //////////////////////////////////////////
-      |--             End Aspect              --|
-       ``````````````````````````````````````````
-"""
-        self.STATUS_FORMAT="{0}   {1} {2}: {3} {1}\n"
-        self.ANNOUNCE_FORMAT="        &{1}@{2}         ...  {3}\n"
+        if self.chatter:
+            self.reporter = AspectReporter(self.params['Out'])
+        else:
+            self.reporter = NonChattyReporter(self.params['Out'])
 
     #TODO: Join points with multiple advisements are getting success/fail/skip
     #      Status overwritten.

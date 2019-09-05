@@ -1,4 +1,5 @@
 # <copyright>
+# (c) Copyright 2019 Autumn Samantha Jeremiah Patterson
 # (c) Copyright 2018 Cardinal Peak Technologies
 # (c) Copyright 2017 Hewlett Packard Enterprise Development LP
 #
@@ -326,6 +327,11 @@ class CsmakeModule:
             os.removedirs(directory)
         except Exception as e:
             self.log.info("Directory not removed (%s): %s", directory, str(e))
+
+    def _listSubCommands(self, options):
+        """Returns a list of subcommands this module will execute, in order of
+           execution"""
+        return []
 
     def _getFileManager(self):
         #TODO: Should we have a global file manager, or just always require
