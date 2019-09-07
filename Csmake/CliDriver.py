@@ -899,7 +899,8 @@ class CliDriver(object):
                     resultObject.chatEnd()
                 self.log.devdebug(" Step Completed: %s" % section)
                 self.log.devdebug("-----------------------------------------")
-                resultObject.finished()
+                if resultObject is not None:
+                    resultObject.finished()
 
     def includeBuildspec(self, spec):
         if not os.path.isfile(spec):
