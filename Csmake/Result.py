@@ -201,7 +201,7 @@ class Result:
     def chatStartOnExitCallback(self, name):
         if self.loglevel:
             self.out()
-            self.reporter.startOnExitCallback(name)
+            self.reporter.startOnExitCallback(name, self.params)
 
     def chatStartJoinPoint(self, joinpoint):
         self.currentjoinpoint = joinpoint
@@ -219,7 +219,7 @@ class Result:
     def chatEndOnExitCallback(self, name):
         if self.loglevel and self.chatter:
             self.out()
-            self.endOnExitCallback(name, self.params)
+            self.reporter.endOnExitCallback(name, self.params)
 
     def chat(self, output, cr=True):
         if self.loglevel:

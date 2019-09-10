@@ -26,7 +26,7 @@ test=Run testing for csmake
 
 [metadata@csmake]
 name=csmake
-version=1.6.3
+version=1.6.4
 description=build scripting tool allowing a completely specified build process
 about=Most build tools are centered around the idea of delivering one or a
  handful of results based around a single tool or development path.
