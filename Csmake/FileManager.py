@@ -969,9 +969,9 @@ class FileManager:
             if value is None:
                 continue
             #print axis, value, newinstanceSpec
-            newinstanceSpec['location'] = re.sub(r'\[~~%s~~\]' % axis, value, newinstanceSpec['location'])
+            newinstanceSpec['location'] = re.sub(r'\[~~%s~~\]' % axis, str(value), newinstanceSpec['location'])
             toSpec.index['location'] = newinstanceSpec['location']
-            newinstanceSpec['relLocation'] = re.sub(r'\[~~%s~~\]' % axis, value, newinstanceSpec['relLocation'])
+            newinstanceSpec['relLocation'] = re.sub(r'\[~~%s~~\]' % axis, str(value), newinstanceSpec['relLocation'])
             toSpec.index['relLocation'] = newinstanceSpec['relLocation']
         self.log.devdebug("newinstancespec: ", str(newinstanceSpec))
         return newinstanceSpec
@@ -1132,7 +1132,7 @@ class FileManager:
                             if type(value) is list or type(value) is dict:
                                 self.log.error("Indeterminate substitution (%s): %s", key, str(ato))
                                 raise ValueError("Indeterminate substitution")
-                            ato.index[locKey] = re.sub(r'\[~~%s~~\]' % key, value, ato.index[locKey])
+                            ato.index[locKey] = re.sub(r'\[~~%s~~\]' % key, str(value), ato.index[locKey])
                     if '[~~' in ato.index[locKey]:
                         self.log.error("Unresolved substitution: %s", str(ato))
                         raise ValueError("Unresolved substitution")

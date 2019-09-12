@@ -890,7 +890,7 @@ class CliDriver(object):
                     while parent is not None:
                         parent, pstack = self.launchStack._getCurrentStack(parent)
                         stack = pstack + stack
-                    self.stackDumps.append((stack, resultObject, phase))
+                    self.stackDumps.append((list(stack), resultObject, phase))
                 if pushedModule:
                     if self.launchStack[-1] is not execinstance:
                         self.log.error("DEVERROR: Launch stack not pointing to current launch")
