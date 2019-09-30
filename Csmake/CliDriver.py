@@ -92,16 +92,24 @@ class CliDriver(object):
         self.outBuildspec.optionxform = str
         self.phasesDecl = None
         self.onBuildExits = {}
+        try:
+            self.tty = os.open(os.ctermid(), os.O_RDWR)
+        except OSError:
+            self.log.info("There is no tty to manipulate")
+            self.tty = None
+        if self.tty is not None:
+            try:
+                self.previous_fg_pgrp = os.tcgetpgrp(self.tty)
+            except OSError:
+                self.previous_fg_pgrp = None
         os.setpgrp()
         #H/T https://stackoverflow.com/questions/15200700/how-do-i-set-the-terminal-foreground-process-group-for-a-process-im-running-und
         self.ttou_handler = signal.signal(signal.SIGTTOU, signal.SIG_IGN)
-        tty = None
-        try:
-            #tty = os.open('/dev/tty', os.O_RDWR)
-            tty = os.open(os.ctermid(), os.O_RDWR)
-            os.tcsetpgrp(tty, os.getpgrp())
-        except OSError:
-            self.log.info("There is no tty to manipulate")
+        if self.tty is not None:
+            try:
+                os.tcsetpgrp(self.tty, os.getpgrp())
+            except OSError:
+                pass
 
     def _endOfPhaseFlush(self):
         #This need to be invoked at the end of every phase
@@ -882,7 +890,7 @@ class CliDriver(object):
                     while parent is not None:
                         parent, pstack = self.launchStack._getCurrentStack(parent)
                         stack = pstack + stack
-                    self.stackDumps.append((stack, resultObject, phase))
+                    self.stackDumps.append((list(stack), resultObject, phase))
                 if pushedModule:
                     if self.launchStack[-1] is not execinstance:
                         self.log.error("DEVERROR: Launch stack not pointing to current launch")
@@ -899,7 +907,8 @@ class CliDriver(object):
                     resultObject.chatEnd()
                 self.log.devdebug(" Step Completed: %s" % section)
                 self.log.devdebug("-----------------------------------------")
-                resultObject.finished()
+                if resultObject is not None:
+                    resultObject.finished()
 
     def includeBuildspec(self, spec):
         if not os.path.isfile(spec):
@@ -952,10 +961,21 @@ class CliDriver(object):
                 self.log.error("XXX Execution of csmake failed")
                 returncode = 1
             self.log.finished()
-            signal.signal(signal.SIGTTOU, self.ttou_handler)
-            os.system('stty sane')
             OutputTee.endAll()
-        sys.exit(returncode)
+            if self.tty is not None:
+                try:
+                    os.tcsetpgrp(self.tty, self.previous_fg_pgrp)
+                except OSError:
+                    pass
+                try:
+                    os.close(self.tty)
+                except:
+                    pass
+            os.system('stty sane')
+            signal.signal(signal.SIGTTOU, self.ttou_handler)
+
+
+        os._exit(returncode)
 
     def realmain(self):
         self._getCurrentProcesses()

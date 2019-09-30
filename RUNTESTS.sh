@@ -263,6 +263,9 @@ phase: build
 phase: aspect, passed
 phase: aspect, end"
 
+#Test nested csmake calls
+dotest-default test-nested test-nested.csmake build
+
 #####################################
 # Testing footer
 echo ""

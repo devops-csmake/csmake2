@@ -1,4 +1,5 @@
 # <copyright>
+# (c) Copyright 2019 Cardinal Peak Technologies
 # (c) Copyright 2019 Autumn Samantha Jeremiah Patterson
 #
 # This program is free software: you can redistribute it and/or modify it
@@ -141,7 +142,7 @@ __________________________________________________________________
         self.out.write(self.ASPECT_JOINPOINT_FOOTER % joinpoint)
         self.out.write('\n')
 
-    def startOnExitCallBack(self, params, name):
+    def startOnExitCallback(self, name, params):
         self.out.write(self.ONEXIT_HEADER)
         self.out.write(self.ONEXIT_ANNOUNCE_FORMAT.format(
             params['Type'],
@@ -215,10 +216,10 @@ class NonChattyReporter(Reporter):
     def endJoinPoint(self, joinpoint):
         pass
 
-    def startOnExitCallback(self, name):
+    def startOnExitCallback(self, name, params):
         pass
 
-    def endOnExitCallback(self, name):
+    def endOnExitCallback(self, name, params):
         pass
 
     def startPhase(self, phase, doc=None):

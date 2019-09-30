@@ -1,0 +1,11 @@
+[~~phases~~]
+**default=build
+
+[command@]
+description=test a nested csmake invocation
+1000=do-nested-csmake
+
+[Shell@do-nested-csmake]
+command=set -eux
+ csmake --makefile test-shell.csmake build
+
