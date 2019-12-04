@@ -1,4 +1,5 @@
 # <copyright>
+# (c) Copyright 2019 Autumn Semantha Jeremiah Patterson
 # (c) Copyright 2017 Hewlett Packard Enterprise Development LP
 #
 # This program is free software: you can redistribute it and/or modify it
@@ -1086,6 +1087,7 @@ class FileManager:
         for spec in fromSpecs:
             instances = self.findInstances(spec)
             for instance in instances:
+                newinstanceSpecs = []
                 for toSpec in toSpecs:
                     newinstanceSpecs.append(
                         self._deriveResultInstanceSpec(
