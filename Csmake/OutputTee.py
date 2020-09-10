@@ -2,6 +2,7 @@
 import subprocess
 import sys
 import tempfile
+import time
 import threading
 
 class OutputTee:
@@ -20,10 +21,20 @@ class OutputTee:
         self.actual = stream
 
     def _consumerThread(self, myfd):
-        while self.threadsOpen[myfd] and self.executing:
+        buf = ""
+        while (self.threadsOpen[myfd] and self.executing) or len(buf):
             buf = myfd.read(2048)
+            if len(buf) == 0:
+                time.sleep(.1)
+                continue
             self.actual.write(buf)
             self.actual.flush()
+            #time.sleep(.1)
+        else:
+            buf = myfd.read(2048)
+            while len(buf):
+                self.actual.write(buf)
+                buf = myfd.read(2048)
         try:
             myfd.close()
         except:
