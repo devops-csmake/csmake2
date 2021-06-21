@@ -47,12 +47,20 @@ class OutputTee:
                 if len(buf) == 0:
                     time.sleep(.1)
                     continue
-                self.actual.write(buf)
-                self.actual.flush()
+                try:
+                    self.actual.write(buf)
+                    self.actual.flush()
+                except:
+                    sys.stderr.write("Couldn't write actual: " + buf + "\n")
+                    sys.stderr.flush()
             else:
                 buf = myfd.read(2048)
                 while len(buf):
-                    self.actual.write(buf)
+                    try:
+                        self.actual.write(buf)
+                    except:
+                        sys.stderr.write("Couldn't write actual: " + buf + "\n")
+                        sys.stderr.flush()
                     buf = myfd.read(2048)
 
     def _init_thread_local(self):
