@@ -1,4 +1,5 @@
 # <copyright>
+# (c) Copyright 2021 Cardinal Peak Technologies, LLC
 # (c) Copyright 2017 Hewlett Packard Enterprise Development LP
 #
 # This program is free software: you can redistribute it and/or modify it
@@ -118,6 +119,24 @@ class testFileManager_basic(unittest.TestCase):
                 os.path.realpath(os.path.abspath(tos[0])))
         cut.absorbMappings(result)
 
+    def test_deadEndFile(self):
+        cut = self._createaCUT()
+        with open(os.path.join(self.working, "__deadend.deadend"), 'w') as f:
+            f.write(" ")
+        with open(os.path.join(self.results, "__new_deadend.newdead"), 'w') as f:
+            f.write(" ")
+        result = cut.parseFileDeclaration("<myid (test:testing)> __deadend.deadend")
+        result = cut.parseFileMap("<myid> -(1-1)-> <newid> __new_deadend.newdead")
+        os.remove(os.path.join(self.working, "__deadend.deadend"))
+        cut.absorbMappings(result, validate=True)
+        result = cut.parseFileMap("<(test)> -(1-1)-> [~~path~~]/[~~file~~]")
+        goodfileexists = False
+        for froms, tos in result.iterfiles():
+            for from_entry in froms:
+                goodfileexists = goodfileexists or "__new_deadend.newdead" in os.path.abspath(from_entry)
+        os.remove(os.path.join(self.results, "__new_deadend.newdead"))
+        self.assertTrue(goodfileexists)
+        
     def test_specialRECharacters(self):
         cut = self._createaCUT()
         result = cut.parseFileDeclaration("<myid (test:testing)> *.special")

@@ -1,4 +1,6 @@
 # <copyright>
+# (c) Copyright 2021 Cardinal Peak Technologies
+# (c) Copyright 2019 Autumn Samantha Jeremiah Patterson
 # (c) Copyright 2017 Hewlett Packard Enterprise Development LP
 #
 # This program is free software: you can redistribute it and/or modify it
@@ -993,7 +995,10 @@ class FileManager:
 
     def _deriveResultFileFromSource(self, instance, fromSpec, toSpec):
         sourcere, resultre, instanceAxis = self._determineMatchingLocationFromSource(instance, fromSpec, toSpec)
-        matcher = re.match(sourcere, instance.index[instanceAxis])
+        matchTarget = instance.index[instanceAxis]
+        if type(matchTarget) is dict:
+            return None
+        matcher = re.match(sourcere, matchTarget)
         if matcher is None:
             self.log.error(
                 "Error: Requested location didn't match the spec")
@@ -1050,7 +1055,7 @@ class FileManager:
         #  will specify a new path
         #location=*/blah*.*.new
         #  will specify a new extension 'new' and a new name blah (with old name appended and 'new' appended on to the old extension)
-        #  NOTE: an a.b.c.d file will be file == a, ext == b.c.d
+        #  NOTE: an a.b.c.d file will be file == a.b.c, ext == d
         #location=*/path-thing/b.a.d.c:
         #  Need to match wildcards  e.g., a/b/*/d -()->
         #  Proposed filemap syntax
@@ -1073,6 +1078,8 @@ class FileManager:
         for spec in fromSpecs:
             instances = self.findInstances(spec)
             for instance in instances:
+                if isinstance(instance, FileRecord):
+                    continue
                 for toSpec in toSpecs:
                     newinstanceSpec = self._deriveResultInstanceSpec(
                         instance,
@@ -1086,6 +1093,7 @@ class FileManager:
         for spec in fromSpecs:
             instances = self.findInstances(spec)
             for instance in instances:
+                newinstanceSpecs = []
                 for toSpec in toSpecs:
                     newinstanceSpecs.append(
                         self._deriveResultInstanceSpec(
@@ -1265,3 +1273,15 @@ class FileRecord(FileManager, IndexedFileEntry):
                 lockedPrecedent = result.getPrecedence(self)
                 instances.extend(current)
         return instances
+
+    def getSourceLocationRE(self):
+        return self.records[-1].getSourceLocationRE()
+
+    def getSourceRelLocationRE(self):
+        return self.records[-1].getSourceRelLocationRE()
+
+    def getResultLocationRE(self):
+        return self.records[-1].getResultLocationRE()
+
+    def getResultRelLocationRE(self):
+        return self.records[-1].getResultRelLocationRE()
