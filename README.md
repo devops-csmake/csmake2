@@ -1,5 +1,6 @@
-# csmake
-Completely Specified Make (csmake) tool - modular build scripting tool
+# csmake2
+Completely Specified Make (csmake) tool for Python v2 - modular build scripting tool
+Deprecated on 8/29/2021
 
 # Overview and Motivation
 Most build tools (such as make, ant, maven, etc.) are centered around the idea
