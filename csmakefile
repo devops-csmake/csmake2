@@ -59,7 +59,7 @@ about=Most build tools are centered around the idea of delivering one or a
  Python coverage is needed if you want to use the python testing
 packager=Autumn Patterson <autumn@casecracker.com>
 manufacturer=Cardinal Peak Technologies, LLC
-depends=python (>= 2.6)
+depends=python (>= 3.6)
 recommends=python-coverage, chrpath
 suggests=csmake-swak, csmake-packaging, csmake-providers
 keywords=make build development
@@ -69,9 +69,8 @@ classifiers=
     Development Status :: 4 - Beta
     Intended Audience :: Developers
     Topic :: Software Development :: Build Tools
-    Programming Language :: Python :: 2
-    Programming Language :: Python :: 2.6
-    Programming Language :: Python :: 2.7
+    Programming Language :: Python :: 3
+    Programming Language :: Python :: 3 :: Only
     License :: OSI Approved :: GNU General Public License v3 (GPLv3)
 **files=
     <bin (python:script)> csmake,

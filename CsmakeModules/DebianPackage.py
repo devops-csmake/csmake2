@@ -18,11 +18,11 @@
 from CsmakeModules.Packager import Packager
 import os
 import os.path
-import email.Utils  #For RFC 2822 timestamp
+import email.utils  #For RFC 2822 timestamp
 import gzip
 import sys
 import subprocess
-import StringIO
+import io
 import tarfile
 import hashlib
 
@@ -103,7 +103,7 @@ class DebianPackage(Packager):
     CLASSIFIER_MAPS = {
         'Section' : {
             '' :
-                        (sys.maxint, 'misc'),
+                        (sys.maxsize, 'misc'),
             'Intended Audience :: Developers' :
                         (9, 'devel'),
             'Topic :: Software Development :: Libraries' :
@@ -153,25 +153,25 @@ can be found in /usr/share/common-licenses/LGPL-2.1 file.""",
         result.uname = 'root'
         result.gid = 0
         result.gname = 'root'
-        result.mode = 0644
+        result.mode = 0o644
         result.mtime = self._getCurrentPOSIXTime()
 
         if script:
-            result.mode = result.mode | 0111
+            result.mode = result.mode | 0o111
         return result
 
     def _writeMaintainerScript(self, script, control):
-        maintfile = StringIO.StringIO()
+        maintfile = io.BytesIO()
         if 'text' in control:
-            maintfile.write('\n'.join(control['text']))
+            maintfile.write('\n'.join(control['text']).encode('utf-8'))
         info = self._createControlFileInfo(script, True)
         self._addFileObjToControl(maintfile, info)
         maintfile.close()
 
     def _writeMaintainerFile(self, filetext, control):
-        maintfile = StringIO.StringIO()
+        maintfile = io.BytesIO()
         if 'text' in control:
-            maintfile.write('\n'.join(control['text']))
+            maintfile.write('\n'.join(control['text']).encode('utf-8'))
         info = self._createControlFileInfo(filetext, False)
         self._addFileObjToControl(maintfile, info)
         maintfile.close()
@@ -192,20 +192,20 @@ can be found in /usr/share/common-licenses/LGPL-2.1 file.""",
         self._writeMaintainerFile('shlibs', control)
 
     def _control_control(self, control):
-        controlfile = StringIO.StringIO()
+        controlfile = io.BytesIO()
         #TODO: Set order?
-        for key, value in control.iteritems():
+        for key, value in control.items():
             if key.startswith('**'):
                 continue
-            controlfile.write('%s: %s\n' % (
+            controlfile.write(('%s: %s\n' % (
                 key,
-                value ) )
+                value )).encode('utf-8') )
         info = self._createControlFileInfo('control')
         self._addFileObjToControl(controlfile, info)
         controlfile.close()
 
     def _control_changelog(self, control):
-        changelogfile = StringIO.StringIO()
+        changelogfile = io.BytesIO()
         gzipper = gzip.GzipFile(mode='wb', fileobj=changelogfile, mtime=0)
 
         changelogPath = os.path.join(
@@ -214,7 +214,7 @@ can be found in /usr/share/common-licenses/LGPL-2.1 file.""",
             'changelog.Debian.gz' )
 
         #TODO: Fix this - it just writes the default for now
-        gzipper.write(control['default-top'])
+        gzipper.write(control['default-top'].encode('utf-8'))
         gzipper.close()
 
         info = self._createArchiveFileInfo(changelogPath)
@@ -222,7 +222,7 @@ can be found in /usr/share/common-licenses/LGPL-2.1 file.""",
         info.uname = 'root'
         info.gid = 0
         info.gname = 'root'
-        info.mode = 0644
+        info.mode = 0o644
         self._addFileObjToArchive(changelogfile, info)
         changelogfile.close()
 
@@ -232,54 +232,54 @@ can be found in /usr/share/common-licenses/LGPL-2.1 file.""",
             return
         if path is not None:
             copyrightFile.write(
-                "Files: %s\n" % path )
+                ("Files: %s\n" % path).encode('utf-8') )
         disclaimers = []
         copystring = "Copyright: "
         for right in copyright:
             copyrightFile.write(
-                "%s %s %s\n" % (
+                ("%s %s %s\n" % (
                     copystring,
                     right['years'],
-                    right['holder'] ) )
+                    right['holder'] )).encode('utf-8') )
             copystring = "   "
             #TODO: What to do if differing licenses?
             license = right['license'].strip()
             if 'disclaimer' in right:
                 disclaimers.append(right['disclaimer'].strip())
         copyrightFile.write(
-            "License: %s\n" % license)
+            ("License: %s\n" % license).encode('utf-8'))
         if license in DebianPackage.LICENSE_TEXTS:
-            copyrightFile.write(DebianPackage.LICENSE_TEXTS[license])
-            copyrightFile.write('\n')
+            copyrightFile.write(DebianPackage.LICENSE_TEXTS[license].encode('utf-8'))
+            copyrightFile.write(b'\n')
         if len(disclaimers) > 0:
             copyrightFile.write(
-                "Disclaimer: %s\n" % '\n'.join(disclaimers))
-        copyrightFile.write('\n')
+                ("Disclaimer: %s\n" % '\n'.join(disclaimers)).encode('utf-8'))
+        copyrightFile.write(b'\n')
 
     #Can't do _control_md5sums, because there is no guaranteed ordering
     def _writeMD5sums(self, control):
-        md5file = StringIO.StringIO()
+        md5file = io.BytesIO()
         md5lines = control['entries']
-        md5file.write('\n'.join(md5lines))
-        md5file.write('\n')
+        md5file.write('\n'.join(md5lines).encode('utf-8'))
+        md5file.write(b'\n')
         info = self._createControlFileInfo('md5sums')
         self._addFileObjToControl(md5file, info)
         md5file.close()
 
     def _control_copyright(self, control):
-        copyrightFile = StringIO.StringIO()
-        copyrightKeys = control['keys'].keys()
+        copyrightFile = io.BytesIO()
+        copyrightKeys = list(control['keys'].keys())
         initialKeyOrder = ['Format-Specification', 'Name', 'Maintainer']
         for key in initialKeyOrder:
-            copyrightFile.write("%s: %s\n" % (
+            copyrightFile.write(("%s: %s\n" % (
                 key,
-                control['keys'][key] ) )
+                control['keys'][key] )).encode('utf-8') )
             copyrightKeys.remove(key)
         for key in copyrightKeys:
-            copyrightFile.write("%s: %s\n" % (
+            copyrightFile.write(("%s: %s\n" % (
                 key,
-                control['keys'][key] ) )
-        copyrightFile.write('\n')
+                control['keys'][key] )).encode('utf-8') )
+        copyrightFile.write(b'\n')
         if 'default' in control:
             if type(control['default']) != list:
                 defaults = [control['default']]
@@ -299,7 +299,7 @@ can be found in /usr/share/common-licenses/LGPL-2.1 file.""",
             self.packageMetadata['Package'],
             'copyright' )
 
-        for key, value in control['files'].iteritems():
+        for key, value in control['files'].items():
             self._writeCopyright(
                 copyrightFile,
                 value,
@@ -310,7 +310,7 @@ can be found in /usr/share/common-licenses/LGPL-2.1 file.""",
         info.uname = 'root'
         info.gid = 0
         info.gname = 'root'
-        info.mode = 0644
+        info.mode = 0o644
         self._addFileObjToArchive(copyrightFile, info)
 
     def _addFileObjToControl(self, fileobj, info):
@@ -370,7 +370,7 @@ can be found in /usr/share/common-licenses/LGPL-2.1 file.""",
                 "low",
                 "  * Initial release",
                 self.packageMetadata['Maintainer'],
-                email.Utils.formatdate() )
+                email.utils.formatdate() )
 
         return self.packageMetadata
 
@@ -417,12 +417,12 @@ can be found in /usr/share/common-licenses/LGPL-2.1 file.""",
             if os.path.isdir(sourcePath):
                 self.log.devdebug("Adding directory: %s", sourcePath)
                 return
-            with open(sourcePath) as content:
+            with open(sourcePath, 'rb') as content:
                 md5sum = self._fileMD5(content)
         elif contents is not None:
             if type(contents) == str:
                 md5calc = hashlib.md5()
-                md5calc.update(contents)
+                md5calc.update(contents.encode('utf-8'))
                 md5sum = md5calc.hexdigest()
             else:
                 md5sum = self._fileMD5(contents)
@@ -469,12 +469,12 @@ can be found in /usr/share/common-licenses/LGPL-2.1 file.""",
                     raise ValueError("%s step failed" % idname)
                 signer = signerResult._getReturnValue(phase)
                 for f in filelist:
-                    with open(os.path.join(self.resultdir, f)) as target:
+                    with open(os.path.join(self.resultdir, f), 'rb') as target:
                         buf = target.read(10240)
                         while len(buf) > 0:
                             signer.update(buf)
                             buf = target.read(10240)
-                with open(os.path.join(self.resultdir, '_gpgorigin'), 'w') as g:
+                with open(os.path.join(self.resultdir, '_gpgorigin'), 'wb') as g:
                     g.write(signer.digest())
                 filelist.append('_gpgorigin')
             command = ['ar', 'rcv', self.fullPackageName] + filelist

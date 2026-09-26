@@ -55,8 +55,7 @@ class command(CsmakeModuleAllPhase):
 
     def _prepareCommand(self, options):
         self.log.devdebug("command options: %s", str(options))
-        steps = options.keys()
-        steps.sort()
+        steps = sorted(options.keys())
         result = []
         for stanzakey in steps:
             if stanzakey.startswith('**'):
@@ -77,7 +76,7 @@ class command(CsmakeModuleAllPhase):
                 threading.Thread.__init__(innerself)
                 innerself.parallelpart = parallelpart.strip()
                 innerself.failure = True
-                innerself._parent = threading.currentThread()
+                innerself._parent = threading.current_thread()
 
             def run(innerself):
                 result = self.engine.launchStep(
@@ -112,7 +111,7 @@ class command(CsmakeModuleAllPhase):
                             parallelpart ) )
                     threads[-1].start()
             for thread in threads:
-                if thread.isAlive():
+                if thread.is_alive():
                     thread.join()
                 if thread.failed():
                     self.log.error("XXXXXX Step '%s' FAILED XXXXXX" % thread.parallelpart)

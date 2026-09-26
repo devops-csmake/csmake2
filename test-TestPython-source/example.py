@@ -21,4 +21,4 @@ class example:
         return 5
 
     def anotherfunc(self):
-        print "no coverage"
+        print("no coverage")

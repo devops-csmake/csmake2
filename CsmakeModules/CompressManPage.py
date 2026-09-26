@@ -40,7 +40,7 @@ class CompressManPage(CsmakeModule):
                 continue
             self._ensureDirectoryExists(result)
             shutil.copyfile(source, result)
-            sourceman = open(source)
+            sourceman = open(source, 'rb')
             makeman = gzip.GzipFile(result, 'wb', mtime=0)
             self.log.info("Writing manpage to '%s'", result)
             makeman.writelines(sourceman)
